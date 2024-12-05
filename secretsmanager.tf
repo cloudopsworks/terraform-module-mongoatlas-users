@@ -5,15 +5,38 @@
 #
 
 locals {
-  mongodb_credentials = {
+  connection_strings_arrs = {
+    for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
+      standard     = split("//", v.connection_strings.0.standard)
+      standard_srv = split("//", v.connection_strings.0.standard_srv)
+      pvt          = length(v.connection_strings.0.private_endpoint) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.connection_string) : []
+      pvt_srv      = length(v.connection_strings.0.private_endpoint) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.srv_connection_string) : []
+    }
+  }
+  mongodb_credentials_conn = {
+    for k, v in var.users : k => {
+      username                      = mongodbatlas_database_user.this[k].username
+      password                      = random_password.randompass[k].result
+      project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
+      project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+      engine                        = "mongodbatlas"
+      connection_string             = format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard[1])
+      connection_string_srv         = format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[1])
+      private_connection_string     = length(local.connection_strings_arrs[v.connection_strings.cluster].pvt) > 0 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].pvt[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].pvt[1]) : ""
+      private_connection_string_srv = length(local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv) > 0 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv[1]) : ""
+    } if try(v.connection_strings.enabled, false)
+  }
+  mongodb_credentials_noconn = {
     for k, v in var.users : k => {
       username     = mongodbatlas_database_user.this[k].username
       password     = random_password.randompass[k].result
       project_name = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id   = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine       = "mongodbatlas"
-    }
+    } if !try(v.connection_strings.enabled, false)
   }
+
+  mongodb_credentials = merge(local.mongodb_credentials_conn, local.mongodb_credentials_noconn)
 }
 
 # Secrets saving
@@ -26,7 +49,7 @@ resource "aws_secretsmanager_secret" "dbuser" {
 resource "aws_secretsmanager_secret_version" "dbuser" {
   for_each      = local.mongodb_credentials
   secret_id     = aws_secretsmanager_secret.dbuser[each.key].id
-  secret_string = mongodbatlas_database_user.this[each.key].username
+  secret_string = each.value.username
 }
 
 resource "aws_secretsmanager_secret" "randompass" {
@@ -38,7 +61,7 @@ resource "aws_secretsmanager_secret" "randompass" {
 resource "aws_secretsmanager_secret_version" "randompass" {
   for_each      = local.mongodb_credentials
   secret_id     = aws_secretsmanager_secret.randompass[each.key].id
-  secret_string = random_password.randompass[each.key].result
+  secret_string = each.value.password
 }
 
 # Secrets saving
@@ -51,5 +74,5 @@ resource "aws_secretsmanager_secret" "atlas_cred" {
 resource "aws_secretsmanager_secret_version" "atlas_cred" {
   for_each      = local.mongodb_credentials
   secret_id     = aws_secretsmanager_secret.atlas_cred[each.key].id
-  secret_string = jsonencode(local.mongodb_credentials[each.key])
+  secret_string = jsonencode(each.value)
 }

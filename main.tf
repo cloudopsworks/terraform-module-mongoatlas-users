@@ -47,3 +47,12 @@ resource "mongodbatlas_database_user" "this" {
     }
   }
 }
+
+data "mongodbatlas_advanced_cluster" "cluster" {
+  for_each = toset([
+    for k, v in var.users : v.connection_strings.cluster
+    if try(v.connection_strings.enabled, false)
+  ])
+  project_id = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+  name       = each.value
+}
