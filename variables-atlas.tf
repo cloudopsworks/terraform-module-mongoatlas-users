@@ -4,6 +4,11 @@
 #            Distributed Under Apache v2.0 License
 #
 
+variable "name_prefix" {
+  description = "(required) A prefix for the name of the cluster"
+  type        = string
+}
+
 variable "project_id" {
   description = "(optional) The ID of the project where the cluster will be created"
   type        = string
@@ -17,7 +22,7 @@ variable "project_name" {
 }
 
 variable "users" {
-  description = "Settings for the module"
+  description = "(required) Settings for the module"
   type        = any
   default     = {}
 }

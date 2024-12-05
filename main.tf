@@ -19,7 +19,7 @@ resource "mongodbatlas_database_user" "this" {
   for_each           = var.users
   auth_database_name = try(each.value.auth_database, "admin")
   project_id         = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
-  username           = try(each.value.username, format("%s-%s-user", each.key, local.system_name_short, each.key))
+  username           = try(each.value.username, format("%s-%s-%s", try(each.value.name_prefix, var.name_prefix), local.system_name_short, each.key))
   password           = random_password.randompass[each.key].result
 
   dynamic "roles" {
