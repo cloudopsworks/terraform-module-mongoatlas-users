@@ -25,8 +25,9 @@ resource "mongodbatlas_database_user" "this" {
   dynamic "roles" {
     for_each = try(each.value.roles, [])
     content {
-      database_name = roles.value.database_name
       role_name     = roles.value.role_name
+      database_name = roles.value.database_name
+      collection_name = try(roles.value.collection_name, null)
     }
   }
 
