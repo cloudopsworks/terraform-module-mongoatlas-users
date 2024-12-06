@@ -7,10 +7,10 @@
 locals {
   connection_strings_arrs = {
     for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
-      standard     = split("//", v.connection_strings.0.standard)
-      standard_srv = split("//", v.connection_strings.0.standard_srv)
-      pvt          = length(v.connection_strings.0.private_endpoint) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.connection_string) : []
-      pvt_srv      = length(v.connection_strings.0.private_endpoint) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.srv_connection_string) : []
+      standard     = split("//", try(v.connection_strings.0.standard,v.connection_strings.standard,""))
+      standard_srv = split("//", try(v.connection_strings.0.standard_srv,v.connection_strings.standard_srv,""))
+      pvt          = length(try(v.connection_strings.0.private_endpoint,[])) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.connection_string) : []
+      pvt_srv      = length(try(v.connection_strings.0.private_endpoint,[])) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.srv_connection_string) : []
     }
   }
   mongodb_credentials_conn = {
