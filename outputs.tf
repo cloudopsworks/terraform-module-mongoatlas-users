@@ -17,3 +17,7 @@ output "users" {
     }
   }
 }
+
+output "debug" {
+  value = data.mongodbatlas_advanced_cluster.cluster
+}
