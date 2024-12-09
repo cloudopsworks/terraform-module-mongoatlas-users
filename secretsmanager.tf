@@ -5,12 +5,19 @@
 #
 
 locals {
+  pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
+    for ep in v.connection_strings.0.private_endpoint : k => {
+      connection_string     = ep.connection_string
+      srv_connection_string = ep.srv_connection_string
+    } if ep.endpoints[0].endpoint_id == var.users[k].connection_strings.endpoint_id
+    }
+  ]...)
   connection_strings_arrs = {
     for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
       standard     = split("//", try(v.connection_strings.0.standard, v.connection_strings.standard, ""))
       standard_srv = split("//", try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, ""))
-      pvt          = length(try(v.connection_strings.0.private_endpoint, [])) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.connection_string) : []
-      pvt_srv      = length(try(v.connection_strings.0.private_endpoint, [])) > 0 ? split("//", v.connection_strings.0.private_endpoint.0.srv_connection_string) : []
+      pvt          = split("//", try(local.pvt_endpoints[k].connection_string, ""))
+      pvt_srv      = split("//", try(local.pvt_endpoints[k].srv_connection_string, ""))
     }
   }
   mongodb_credentials_conn = {
