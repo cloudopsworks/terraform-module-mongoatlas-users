@@ -7,29 +7,37 @@
 locals {
   pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
     for ep in v.connection_strings.0.private_endpoint : "${k}-${ep.endpoints[0].endpoint_id}" => {
-      pvt         = split("//", try(ep.connection_string, ""))
-      pvt_srv     = split("//", try(ep.srv_connection_string, ""))
-      endpoint_id = ep.endpoints[0].endpoint_id
+      connection     = try(ep.connection_string, "")
+      srv_connection = try(ep.srv_connection_string, "")
+      pvt            = split("//", try(ep.connection_string, ""))
+      pvt_srv        = split("//", try(ep.srv_connection_string, ""))
+      endpoint_id    = ep.endpoints[0].endpoint_id
     }
     }
   ]...)
   connection_strings_arrs = {
     for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
+      plain        = try(v.connection_strings.0.standard, v.connection_strings.standard, "")
+      plain_srv    = try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, "")
       standard     = split("//", try(v.connection_strings.0.standard, v.connection_strings.standard, ""))
       standard_srv = split("//", try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, ""))
     }
   }
   mongodb_credentials_conn = {
     for k, v in var.users : k => {
-      username                      = mongodbatlas_database_user.this[k].username
-      password                      = random_password.randompass[k].result
-      project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
-      project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
-      engine                        = "mongodbatlas"
-      connection_string             = length(local.connection_strings_arrs[v.connection_strings.cluster].standard) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard[1]) : ""
-      connection_string_srv         = length(local.connection_strings_arrs[v.connection_strings.cluster].standard_srv) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[1]) : ""
-      private_connection_string     = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[1]) : ""
-      private_connection_string_srv = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[1]) : ""
+      username                            = mongodbatlas_database_user.this[k].username
+      password                            = random_password.randompass[k].result
+      project_name                        = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
+      project_id                          = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+      engine                              = "mongodbatlas"
+      connection_string                   = length(local.connection_strings_arrs[v.connection_strings.cluster].standard) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard[1]) : ""
+      connection_string_srv               = length(local.connection_strings_arrs[v.connection_strings.cluster].standard_srv) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[1]) : ""
+      private_connection_string           = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[1]) : ""
+      private_connection_string_srv       = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[1]) : ""
+      plain_connection_string             = local.connection_strings_arrs[v.connection_strings.cluster].plain
+      plain_connection_string_srv         = local.connection_strings_arrs[v.connection_strings.cluster].plain_srv
+      plain_private_connection_string     = try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].connection, "")
+      plain_private_connection_string_srv = try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].srv_connection, "")
     } if try(v.connection_strings.enabled, false)
   }
   mongodb_credentials_noconn = {
