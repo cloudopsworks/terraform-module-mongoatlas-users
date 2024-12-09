@@ -6,18 +6,17 @@
 
 locals {
   pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
-    for ep in v.connection_strings.0.private_endpoint : k => {
-      connection_string     = ep.connection_string
-      srv_connection_string = ep.srv_connection_string
-    } if ep.endpoints[0].endpoint_id == try(var.users[k].connection_strings.endpoint_id, "")
+    for ep in v.connection_strings.0.private_endpoint : "${k}-${ep.endpoints[0].endpoint_id}" => {
+      pvt         = split("//", try(ep.connection_string, ""))
+      pvt_srv     = split("//", try(ep.srv_connection_string, ""))
+      endpoint_id = ep.endpoints[0].endpoint_id
+    }
     }
   ]...)
   connection_strings_arrs = {
     for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
       standard     = split("//", try(v.connection_strings.0.standard, v.connection_strings.standard, ""))
       standard_srv = split("//", try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, ""))
-      pvt          = split("//", try(local.pvt_endpoints[k].connection_string, ""))
-      pvt_srv      = split("//", try(local.pvt_endpoints[k].srv_connection_string, ""))
     }
   }
   mongodb_credentials_conn = {
@@ -29,8 +28,8 @@ locals {
       engine                        = "mongodbatlas"
       connection_string             = length(local.connection_strings_arrs[v.connection_strings.cluster].standard) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard[1]) : ""
       connection_string_srv         = length(local.connection_strings_arrs[v.connection_strings.cluster].standard_srv) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].standard_srv[1]) : ""
-      private_connection_string     = length(local.connection_strings_arrs[v.connection_strings.cluster].pvt) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].pvt[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].pvt[1]) : ""
-      private_connection_string_srv = length(local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv) > 1 ? format("%s//%s:%s@%s", local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.connection_strings_arrs[v.connection_strings.cluster].pvt_srv[1]) : ""
+      private_connection_string     = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt[1]) : ""
+      private_connection_string_srv = length(try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv, [])) > 1 ? format("%s//%s:%s@%s", local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[0], mongodbatlas_database_user.this[k].username, random_password.randompass[k].result, local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].pvt_srv[1]) : ""
     } if try(v.connection_strings.enabled, false)
   }
   mongodb_credentials_noconn = {
