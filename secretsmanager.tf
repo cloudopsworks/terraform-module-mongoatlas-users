@@ -9,7 +9,7 @@ locals {
     for ep in v.connection_strings.0.private_endpoint : k => {
       connection_string     = ep.connection_string
       srv_connection_string = ep.srv_connection_string
-    } if ep.endpoints[0].endpoint_id == var.users[k].connection_strings.endpoint_id
+    } if ep.endpoints[0].endpoint_id == try(var.users[k].connection_strings.endpoint_id, "")
     }
   ]...)
   connection_strings_arrs = {
