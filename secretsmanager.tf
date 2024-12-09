@@ -104,7 +104,7 @@ resource "aws_secretsmanager_secret" "atlas_cred_conn" {
 }
 
 resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
-  for_each      = local.mongodb_credentials
+  for_each      = local.mongodb_connection_strings
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
   secret_string = jsonencode(each.value)
 }
