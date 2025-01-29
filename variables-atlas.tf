@@ -25,18 +25,20 @@ variable "project_name" {
 # YAML Entry Format:
 # users:
 #   user1:
-#     name_prefix: "prefix1" (optional) if omitted var.name_prefix is used
-#     username: "user1"  (optional) uses this value for the name of the user
+#     name_prefix: "prefix1" #(optional) if omitted var.name_prefix is used
+#     username: "user1"  #(optional) uses this value for the name of the user
 #     roles: Documented Here https://www.mongodb.com/docs/atlas/mongodb-users-roles-and-privileges/
 #       - role_name: "readWrite"
 #         database_name: "test"
-#         collection_name: "test" (optional)
+#         collection_name: "test" #(optional)
 #     scopes:
 #       - name: "xxxxxyyyzzz"
-#         type: "project" (optional) default is "CLUSTER"
+#         type: "project" #(optional) default is "CLUSTER"
 #     connection_strings:
-#       enabled: false (optional) default is false
+#       enabled: false #(optional) default is false
 #       cluster: "test"
+#       endpoint_id: "vpce-xxxxxyyyzzz" #(optional)
+#       database_name: "mydatabase" #(optional)
 variable "users" {
   description = "(required) Settings for the module"
   type        = any

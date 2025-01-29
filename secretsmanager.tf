@@ -58,30 +58,30 @@ locals {
   mongodb_credentials = merge(local.mongodb_credentials_conn, local.mongodb_credentials_noconn)
 }
 
-# Secrets saving
-resource "aws_secretsmanager_secret" "dbuser" {
-  for_each = local.mongodb_credentials
-  name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-username"
-  tags     = local.all_tags
-}
+# # Secrets saving
+# resource "aws_secretsmanager_secret" "dbuser" {
+#   for_each = local.mongodb_credentials
+#   name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-username"
+#   tags     = local.all_tags
+# }
+#
+# resource "aws_secretsmanager_secret_version" "dbuser" {
+#   for_each      = local.mongodb_credentials
+#   secret_id     = aws_secretsmanager_secret.dbuser[each.key].id
+#   secret_string = each.value.username
+# }
 
-resource "aws_secretsmanager_secret_version" "dbuser" {
-  for_each      = local.mongodb_credentials
-  secret_id     = aws_secretsmanager_secret.dbuser[each.key].id
-  secret_string = each.value.username
-}
-
-resource "aws_secretsmanager_secret" "randompass" {
-  for_each = local.mongodb_credentials
-  name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-password"
-  tags     = local.all_tags
-}
-
-resource "aws_secretsmanager_secret_version" "randompass" {
-  for_each      = local.mongodb_credentials
-  secret_id     = aws_secretsmanager_secret.randompass[each.key].id
-  secret_string = each.value.password
-}
+# resource "aws_secretsmanager_secret" "randompass" {
+#   for_each = local.mongodb_credentials
+#   name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-password"
+#   tags     = local.all_tags
+# }
+#
+# resource "aws_secretsmanager_secret_version" "randompass" {
+#   for_each      = local.mongodb_credentials
+#   secret_id     = aws_secretsmanager_secret.randompass[each.key].id
+#   secret_string = each.value.password
+# }
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred" {
@@ -98,7 +98,7 @@ resource "aws_secretsmanager_secret_version" "atlas_cred" {
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
-  for_each = local.mongodb_credentials
+  for_each = local.mongodb_connection_strings
   name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-connstrings"
   tags     = local.all_tags
 }
