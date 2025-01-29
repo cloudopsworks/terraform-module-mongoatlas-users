@@ -100,7 +100,7 @@ resource "aws_secretsmanager_secret_version" "atlas_cred" {
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
-  for_each = local.mongodb_connection_strings
+  for_each = local.mongodb_credentials
   name     = "${local.secret_store_path}/mongodbatlas/${each.value.project_name}/${each.key}-connstrings"
   tags     = local.all_tags
 }
