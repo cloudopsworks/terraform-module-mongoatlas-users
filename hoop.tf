@@ -8,7 +8,7 @@ locals {
   hoop_tags = length(try(var.hoop.tags, [])) > 0 ? join(" ", [for v in var.hoop.tags : "--tags \"${v}\""]) : ""
   hoop_connection = try(var.hoop.enabled, false) ? [
     for key, user in local.mongodb_credentials : <<EOT
-hoop admin create connection ${user.project_name}-${user.username}-${lookup(local.default_roles, user.role, "default")} \
+hoop admin create connection ${user.project_name}-${user.username}-${lookup(local.default_roles, user.role_name, "default")} \
   --agent ${var.hoop.agent} \
   --type database/mongodb \
   -e "CONNECTION_STRING=_aws:${aws_secretsmanager_secret.atlas_cred[0].name}:connection_string" \
