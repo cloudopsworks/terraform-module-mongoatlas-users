@@ -37,7 +37,6 @@ locals {
       project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine                        = "mongodbatlas"
-      role_name                     = v.role_name
       url                           = local.connection_strings_arrs[v.connection_strings.cluster].plain
       url_srv                       = local.connection_strings_arrs[v.connection_strings.cluster].plain_srv
       private_url                   = try(local.pvt_endpoints["${v.connection_strings.cluster}-${v.connection_strings.endpoint_id}"].connection, "")
@@ -61,7 +60,6 @@ locals {
       project_name = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id   = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine       = "mongodbatlas"
-      role         = v.role
     } if !try(v.connection_strings.enabled, false)
   }
 
