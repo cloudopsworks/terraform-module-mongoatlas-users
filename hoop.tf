@@ -17,14 +17,14 @@ hoop admin create connection mongo-db-${lower(user.project_name)}-${lower(key)}-
   ${local.hoop_tags}
 EOT
     )
-  ] : null
+  ] : []
 }
 
 resource "null_resource" "hoop_connection" {
-  for_each = {
-    for k, v in local.hoop_connection : k => v
+  for_each = [
+    for v in local.hoop_connection : v
     if var.run_hoop
-  }
+  ]
   provisioner "local-exec" {
     command     = each.value
     interpreter = ["bash", "-c"]
