@@ -44,3 +44,15 @@ variable "users" {
   type        = any
   default     = {}
 }
+
+variable "hoop" {
+  description = "(optional) Hoop Settings for the module"
+  type        = any
+  default     = {}
+}
+
+variable "run_hoop" {
+  description = "Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null_resource"
+  type        = bool
+  default     = false
+}
