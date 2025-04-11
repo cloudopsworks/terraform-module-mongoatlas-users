@@ -11,7 +11,7 @@ locals {
 hoop admin create connection ${user.project_name}-${user.username}-${lookup(local.default_roles, var.users[key].role_name, "default")} \
   --agent ${var.hoop.agent} \
   --type database/mongodb \
-  -e "CONNECTION_STRING=_aws:${aws_secretsmanager_secret.atlas_cred_conn[key].name}:${try(user.endpoint_id, "") != "" ? "private_" : ""}connection_string${try(var.users[key].srv, true) ? "_srv" : ""}" \
+  -e "CONNECTION_STRING=_aws:${aws_secretsmanager_secret.atlas_cred_conn[key].name}:${try(user.endpoint_id, "") != "" ? "private_" : ""}connection_string" \
   --overwrite \
   ${local.hoop_tags}
 EOT
