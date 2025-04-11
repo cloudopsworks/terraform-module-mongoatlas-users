@@ -33,5 +33,4 @@ resource "null_resource" "hoop_connection" {
 
 output "hoop_connection" {
   value     = local.hoop_connection
-  sensitive = true
 }
