@@ -9,7 +9,7 @@ locals {
   hoop_connection = try(var.hoop.enabled, false) ? [
     for key, user in local.mongodb_credentials : nonsensitive(
       <<EOT
-hoop admin create connection ${lower(user.project_name)}-${lower(key)}-${lookup(local.default_roles, var.users[key].role_name, "default")} \
+hoop admin create connection mongo-db-${lower(user.project_name)}-${lower(key)}-${lookup(local.default_roles, var.users[key].role_name, "default")} \
   --agent ${var.hoop.agent} \
   --type database/mongodb \
   -e "CONNECTION_STRING=_aws:${aws_secretsmanager_secret.atlas_cred_conn[key].name}:${try(user.endpoint_id, "") != "" ? "private_" : ""}connection_string" \
