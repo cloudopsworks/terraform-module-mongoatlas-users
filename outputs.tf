@@ -7,12 +7,11 @@
 output "users" {
   value = {
     for k, v in local.mongodb_credentials : k => {
-      username                   = v.username
-      project_name               = v.project_name
-      project_id                 = v.project_id
-      engine                     = v.engine
-      secrets_credentials        = aws_secretsmanager_secret.atlas_cred[k].name
-      secrets_connection_strings = aws_secretsmanager_secret.atlas_cred_conn[k].name
+      username            = v.username
+      project_name        = v.project_name
+      project_id          = v.project_id
+      engine              = v.engine
+      secrets_credentials = aws_secretsmanager_secret.atlas_cred[k].name
     }
   }
 }
