@@ -6,8 +6,8 @@
 
 locals {
   hoop_tags = length(try(var.hoop.tags, [])) > 0 ? join(" ", [for v in var.hoop.tags : "--tags \"${v}\""]) : ""
-  hoop_connection = try(var.hoop.enabled, false) ? [
-    for key, user in local.mongodb_credentials : nonsensitive(
+  hoop_connection = try(var.hoop.enabled, false) ? {
+    for key, user in local.mongodb_credentials : key => nonsensitive(
       <<EOT
 hoop admin create connection mongo-db-${lower(user.project_name)}-${lower(key)}-${lookup(local.default_roles, var.users[key].role_name, "default")} \
   --agent ${var.hoop.agent} \
@@ -17,14 +17,14 @@ hoop admin create connection mongo-db-${lower(user.project_name)}-${lower(key)}-
   ${local.hoop_tags}
 EOT
     )
-  ] : []
+  } : {}
 }
 
 resource "null_resource" "hoop_connection" {
-  for_each = [
-    for v in local.hoop_connection : v
+  for_each = {
+    for k, v in local.hoop_connection : k => v
     if var.run_hoop
-  ]
+  }
   provisioner "local-exec" {
     command     = each.value
     interpreter = ["bash", "-c"]
