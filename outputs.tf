@@ -14,4 +14,5 @@ output "users" {
       secrets_credentials = aws_secretsmanager_secret.atlas_cred_conn[k].name
     }
   }
+  sensitive = true
 }
