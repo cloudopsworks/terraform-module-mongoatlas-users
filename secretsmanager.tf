@@ -9,7 +9,9 @@ locals {
     readwrite    = "rw"
     read         = "ro"
     dbadmin      = "dba"
+    admin        = "dba"
     dbowner      = "ow"
+    owner        = "ow"
     clusteradmin = "ca"
   }
   pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
