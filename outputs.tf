@@ -11,7 +11,7 @@ output "users" {
       project_name        = v.project_name
       project_id          = v.project_id
       engine              = v.engine
-      secrets_credentials = aws_secretsmanager_secret.atlas_cred_conn[k].name
+      secrets_credentials = nonsensitive(aws_secretsmanager_secret.atlas_cred_conn[k].name)
     }
   }
   sensitive = true
