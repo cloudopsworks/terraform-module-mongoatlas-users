@@ -56,3 +56,43 @@ variable "run_hoop" {
   type        = bool
   default     = false
 }
+
+variable "rotation_lambda_name" {
+  description = "(optional) Name of the lambda function to rotate the password"
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
+variable "password_rotation_period" {
+  description = "(optional) Password rotation period in days"
+  type        = number
+  default     = 90
+  nullable    = false
+}
+
+variable "rotation_duration" {
+  description = "(optional) Duration of the lambda function to rotate the password"
+  type        = string
+  default     = "1h"
+  nullable    = false
+}
+
+variable "rotate_immediately" {
+  description = "(optional) Rotate the password immediately"
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
+variable "force_reset" {
+  description = "(optional) Force Reset the password"
+  type        = bool
+  default     = false
+}
+
+variable "secrets_kms_key_id" {
+  description = "(optional) KMS Key ID to use to encrypt data in this secret, can be ARN or KMS Alias"
+  type        = string
+  default     = null
+}
