@@ -80,9 +80,16 @@ locals {
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
-  for_each = local.mongodb_credentials
-  name     = local.name_list[each.key]
-  tags     = local.all_tags
+  for_each    = local.mongodb_credentials
+  description = "MongoDB User Credentials - ${each.value.username} - ${each.value.project_name}${try(each.value.dbname, "") != "" ? format(" - %s", each.value.dbname) : ""}"
+  name        = local.name_list[each.key]
+  kms_key_id  = var.secrets_kms_key_id
+  tags = merge(local.all_tags, {
+    "mongodb-username" = each.value.username
+    "mongodb-project"  = each.value.project_name
+    },
+    try(each.value.dbname, "") != "" ? { "mongodb-dbname" = try(each.value.dbname, "") } : {}
+  )
 }
 
 resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
