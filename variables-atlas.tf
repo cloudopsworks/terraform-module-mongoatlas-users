@@ -68,12 +68,14 @@ variable "password_rotation_period" {
   description = "Password rotation period in days"
   type        = number
   default     = 90
+  nullable    = false
 }
 
 variable "rotation_duration" {
   description = "Duration of the lambda function to rotate the password"
   type        = string
   default     = "1h"
+  nullable    = false
 }
 
 variable "rotate_immediately" {

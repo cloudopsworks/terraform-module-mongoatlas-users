@@ -23,5 +23,5 @@ resource "random_password" "randompass" {
 
 resource "time_rotating" "randompass" {
   for_each      = var.users
-  rotation_days = try(each.value.password_rotation_period, 90)
+  rotation_days = try(each.value.password_rotation_period, var.password_rotation_period)
 }
