@@ -39,7 +39,6 @@ locals {
     for k, v in var.users : k => {
       auth_database                 = try(v.auth_database, "admin")
       username                      = local.user_names_list[k]
-      password                      = local.user_passwords[k]
       project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine                        = "mongodbatlas"
@@ -63,7 +62,6 @@ locals {
   mongodb_credentials_noconn = {
     for k, v in var.users : k => {
       username      = local.user_names_list[k]
-      password      = local.user_passwords[k]
       auth_database = try(v.auth_database, "admin")
       project_name  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
@@ -103,7 +101,11 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
     for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name == ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(each.value)
+  secret_string = jsonencode(merge(
+    each.value, {
+      password      = local.user_passwords[each.key]
+    }
+  ))
 }
 
 ## Rotation Enabled
@@ -143,7 +145,11 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
     for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(each.value)
+  secret_string = jsonencode(merge(
+    each.value, {
+      password      = local.user_passwords[each.key]
+    }
+  ))
   lifecycle {
     ignore_changes = [
       secret_string,
