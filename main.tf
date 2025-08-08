@@ -6,7 +6,7 @@
 
 locals {
   user_names_list = {
-    for k, v in var.users : k => try(each.value.username, format("%s-%s-%s", try(each.value.name_prefix, var.name_prefix), local.system_name_short, each.key))
+    for k, v in var.users : k => try(v.username, format("%s-%s-%s", try(v.name_prefix, var.name_prefix), local.system_name_short, k))
   }
 }
 
