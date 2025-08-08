@@ -39,6 +39,7 @@ locals {
     for k, v in var.users : k => {
       auth_database                 = try(v.auth_database, "admin")
       username                      = local.user_names_list[k]
+      password                      = local.user_passwords[k]
       project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine                        = "mongodbatlas"
@@ -62,6 +63,7 @@ locals {
   mongodb_credentials_noconn = {
     for k, v in var.users : k => {
       username      = local.user_names_list[k]
+      password      = local.user_passwords[k]
       auth_database = try(v.auth_database, "admin")
       project_name  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
@@ -81,15 +83,15 @@ locals {
 
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
-  for_each    = local.mongodb_credentials
-  description = "MongoDB User Credentials - ${each.value.username} - ${each.value.project_name}${try(each.value.dbname, "") != "" ? format(" - %s", each.value.dbname) : ""}"
+  for_each    = var.users
+  description = "MongoDB User Credentials - ${local.mongodb_credentials[each.value].username} - ${local.mongodb_credentials[each.value].project_name}${try(local.mongodb_credentials[each.value].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.value].dbname) : ""}"
   name        = local.name_list[each.key]
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
-    "mongodb-username" = each.value.username
-    "mongodb-project"  = each.value.project_name
+    "mongodb-username" = local.mongodb_credentials[each.value].username
+    "mongodb-project"  = local.mongodb_credentials[each.value].project_name
     },
-    try(each.value.dbname, "") != "" ? { "mongodb-dbname" = try(each.value.dbname, "") } : {}
+    try(local.mongodb_credentials[each.value].dbname, "") != "" ? { "mongodb-dbname" = try(local.mongodb_credentials[each.value].dbname, "") } : {}
   )
   depends_on = [
     mongodbatlas_database_user.this
@@ -98,20 +100,16 @@ resource "aws_secretsmanager_secret" "atlas_cred_conn" {
 
 resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
   for_each = {
-    for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name == ""
+    for k, v in var.users : k => v if var.rotation_lambda_name == ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(merge(
-    each.value, {
-      password      = local.user_passwords[each.key]
-    }
-  ))
+  secret_string = jsonencode(local.mongodb_credentials[each.value])
 }
 
 ## Rotation Enabled
 data "aws_secretsmanager_secrets" "atlas_cred_conn_rotated" {
   for_each = {
-    for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != ""
+    for k, v in var.users : k => v if var.rotation_lambda_name != ""
   }
   filter {
     name = "name"
@@ -123,14 +121,14 @@ data "aws_secretsmanager_secrets" "atlas_cred_conn_rotated" {
 
 data "aws_secretsmanager_secret_versions" "atlas_cred_conn_rotated" {
   for_each = {
-  for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != "" && length(try(data.aws_secretsmanager_secrets.atlas_cred_conn_rotated[k].names, [])) > 0 }
+  for k, v in var.users : k => v if var.rotation_lambda_name != "" && length(try(data.aws_secretsmanager_secrets.atlas_cred_conn_rotated[k].names, [])) > 0 }
   secret_id          = local.name_list[each.key]
   include_deprecated = true
 }
 
 data "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
   for_each = {
-    for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != "" && length(try(data.aws_secretsmanager_secrets.atlas_cred_conn_rotated[k].names, [])) > 0 && length(try(data.aws_secretsmanager_secret_versions.atlas_cred_conn_rotated[k].versions, [])) > 0
+    for k, v in var.users : k => v if var.rotation_lambda_name != "" && length(try(data.aws_secretsmanager_secrets.atlas_cred_conn_rotated[k].names, [])) > 0 && length(try(data.aws_secretsmanager_secret_versions.atlas_cred_conn_rotated[k].versions, [])) > 0
   }
   secret_id = local.name_list[each.key]
 }
@@ -142,14 +140,10 @@ data "aws_lambda_function" "rotation_function" {
 
 resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
   for_each = {
-    for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != ""
+    for k, v in var.users : k => v if var.rotation_lambda_name != ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(merge(
-    each.value, {
-      password      = local.user_passwords[each.key]
-    }
-  ))
+  secret_string = jsonencode(local.mongodb_credentials[each.value])
   lifecycle {
     ignore_changes = [
       secret_string,
@@ -160,7 +154,7 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
 
 resource "aws_secretsmanager_secret_rotation" "atlas_cred_conn_rotation" {
   for_each = {
-    for k, v in local.mongodb_credentials : k => v if var.rotation_lambda_name != ""
+    for k, v in var.users : k => v if var.rotation_lambda_name != ""
   }
   secret_id           = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
   rotation_lambda_arn = data.aws_lambda_function.rotation_function[0].arn
