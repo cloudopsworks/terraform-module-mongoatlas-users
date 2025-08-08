@@ -4,6 +4,12 @@
 #            Distributed Under Apache v2.0 License
 #
 
+locals {
+  user_names_list = {
+    for k, v in var.users : k => try(v.username, format("%s-%s-%s", try(v.name_prefix, var.name_prefix), local.system_name_short, k))
+  }
+}
+
 data "mongodbatlas_project" "this" {
   count = var.project_name != "" ? 1 : 0
   name  = var.project_name
@@ -18,8 +24,8 @@ data "mongodbatlas_project" "this_id" {
 resource "mongodbatlas_database_user" "this" {
   for_each           = var.users
   auth_database_name = try(each.value.auth_database, "admin")
-  project_id         = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
-  username           = try(each.value.username, format("%s-%s-%s", try(each.value.name_prefix, var.name_prefix), local.system_name_short, each.key))
+  project_id         = local.project_id
+  username           = local.user_names_list[each.key]
   password           = var.rotation_lambda_name == "" ? random_password.randompass[each.key].result : random_password.randompass_rotated[each.key].result
 
   dynamic "roles" {
@@ -53,6 +59,6 @@ data "mongodbatlas_advanced_cluster" "cluster" {
     for k, v in var.users : v.connection_strings.cluster
     if try(v.connection_strings.enabled, false)
   ])
-  project_id = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+  project_id = local.project_id
   name       = each.value
 }
