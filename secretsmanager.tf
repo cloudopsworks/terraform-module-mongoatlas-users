@@ -84,14 +84,14 @@ locals {
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
   for_each    = var.users
-  description = "MongoDB User Credentials - ${local.mongodb_credentials[each.value].username} - ${local.mongodb_credentials[each.value].project_name}${try(local.mongodb_credentials[each.value].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.value].dbname) : ""}"
+  description = "MongoDB User Credentials - ${local.mongodb_credentials[each.key].username} - ${local.mongodb_credentials[each.key].project_name}${try(local.mongodb_credentials[each.key].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.key].dbname) : ""}"
   name        = local.name_list[each.key]
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
-    "mongodb-username" = local.mongodb_credentials[each.value].username
-    "mongodb-project"  = local.mongodb_credentials[each.value].project_name
+    "mongodb-username" = local.mongodb_credentials[each.key].username
+    "mongodb-project"  = local.mongodb_credentials[each.key].project_name
     },
-    try(local.mongodb_credentials[each.value].dbname, "") != "" ? { "mongodb-dbname" = try(local.mongodb_credentials[each.value].dbname, "") } : {}
+    try(local.mongodb_credentials[each.key].dbname, "") != "" ? { "mongodb-dbname" = try(local.mongodb_credentials[each.key].dbname, "") } : {}
   )
   depends_on = [
     mongodbatlas_database_user.this
@@ -103,7 +103,7 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
     for k, v in var.users : k => v if var.rotation_lambda_name == ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(local.mongodb_credentials[each.value])
+  secret_string = jsonencode(local.mongodb_credentials[each.key])
 }
 
 ## Rotation Enabled
@@ -143,7 +143,7 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
     for k, v in var.users : k => v if var.rotation_lambda_name != ""
   }
   secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(local.mongodb_credentials[each.value])
+  secret_string = jsonencode(local.mongodb_credentials[each.key])
   lifecycle {
     ignore_changes = [
       secret_string,
