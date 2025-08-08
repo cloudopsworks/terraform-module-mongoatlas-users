@@ -86,14 +86,14 @@ locals {
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
   for_each    = var.users
-  description = "MongoDB User Credentials - ${local.mongodb_credentials[each.key].username} - ${local.mongodb_credentials[each.key].project_name}${try(local.mongodb_credentials[each.key].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.key].dbname) : ""}"
+  description = nonsensitive("MongoDB User Credentials - ${local.mongodb_credentials[each.key].username} - ${local.mongodb_credentials[each.key].project_name}${try(local.mongodb_credentials[each.key].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.key].dbname) : ""}")
   name        = local.name_list[each.key]
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
-    "mongodb-username" = local.mongodb_credentials[each.key].username
-    "mongodb-project"  = local.mongodb_credentials[each.key].project_name
+    "mongodb-username" = nonsensitive(local.mongodb_credentials[each.key].username)
+    "mongodb-project"  = nonsensitive(local.mongodb_credentials[each.key].project_name)
     },
-    try(local.mongodb_credentials[each.key].dbname, "") != "" ? { "mongodb-dbname" = try(local.mongodb_credentials[each.key].dbname, "") } : {}
+    try(local.mongodb_credentials[each.key].dbname, "") != "" ? { "mongodb-dbname" = nonsensitive(try(local.mongodb_credentials[each.key].dbname, "")) } : {}
   )
   depends_on = [
     mongodbatlas_database_user.this
