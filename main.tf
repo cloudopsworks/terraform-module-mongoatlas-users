@@ -24,7 +24,7 @@ data "mongodbatlas_project" "this_id" {
 resource "mongodbatlas_database_user" "this" {
   for_each           = var.users
   auth_database_name = try(each.value.auth_database, "admin")
-  project_id         = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+  project_id         = local.project_id
   username           = local.user_names_list[each.key]
   password           = var.rotation_lambda_name == "" ? random_password.randompass[each.key].result : random_password.randompass_rotated[each.key].result
 
@@ -59,6 +59,6 @@ data "mongodbatlas_advanced_cluster" "cluster" {
     for k, v in var.users : v.connection_strings.cluster
     if try(v.connection_strings.enabled, false)
   ])
-  project_id = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+  project_id = local.project_id
   name       = each.value
 }

@@ -5,6 +5,8 @@
 #
 
 locals {
+  project_name = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
+  project_id   = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
   default_roles = {
     readwrite    = "rw"
     read         = "ro"
@@ -40,8 +42,8 @@ locals {
       auth_database                 = try(v.auth_database, "admin")
       username                      = local.user_names_list[k]
       password                      = local.user_passwords[k]
-      project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
-      project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+      project_name                  = local.project_name
+      project_id                    = local.project_id
       engine                        = "mongodbatlas"
       dbname                        = try(v.connection_strings.database_name, "")
       url                           = local.connection_strings_arrs[v.connection_strings.cluster].plain
@@ -65,15 +67,15 @@ locals {
       username      = local.user_names_list[k]
       password      = local.user_passwords[k]
       auth_database = try(v.auth_database, "admin")
-      project_name  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
-      project_id    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
+      project_name  = local.project_name
+      project_id    = local.project_id
       engine        = "mongodbatlas"
     } if !try(v.connection_strings.enabled, false)
   }
 
   mongodb_credentials = merge(local.mongodb_credentials_conn, local.mongodb_credentials_noconn)
   name_list = {
-    for k, v in local.mongodb_credentials : k => format("%s/mongodbatlas/%s/%s-connstrings",
+    for k, v in var.users : k => format("%s/mongodbatlas/%s/%s-connstrings",
       local.secret_store_path,
       lower(replace(replace(v.project_name, " ", ""), "_", "-")),
       lower(replace(k, "_", "-")),
