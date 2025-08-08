@@ -90,10 +90,10 @@ resource "aws_secretsmanager_secret" "atlas_cred_conn" {
   name        = local.name_list[each.key]
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
-    "mongodb-username" = nonsensitive(local.mongodb_credentials[each.key].username)
-    "mongodb-project"  = nonsensitive(local.mongodb_credentials[each.key].project_name)
+    "mongodb-username" = local.user_names_list[each.key]
+    "mongodb-project"  = local.project_name
     },
-    try(local.mongodb_credentials[each.key].dbname, "") != "" ? { "mongodb-dbname" = nonsensitive(try(local.mongodb_credentials[each.key].dbname, "")) } : {}
+    try(var.users[each.key].connection_strings.database_name, "") != "" ? { "mongodb-dbname" = try(var.users[each.key].connection_strings.database_name, "") } : {}
   )
   depends_on = [
     mongodbatlas_database_user.this
