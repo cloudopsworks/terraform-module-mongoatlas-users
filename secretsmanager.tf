@@ -36,7 +36,7 @@ locals {
     for k, v in var.users : k => {
       auth_database                 = try(v.auth_database, "admin")
       username                      = mongodbatlas_database_user.this[k].username
-      password                      = random_password.randompass[k].result
+      password                      = var.rotation_lambda_name == "" ? random_password.randompass[k].result : random_password.randompass_rotated[k].result
       project_name                  = var.project_name != "" ? var.project_name : data.mongodbatlas_project.this_id[0].name
       project_id                    = var.project_id != "" ? var.project_id : data.mongodbatlas_project.this[0].id
       engine                        = "mongodbatlas"
