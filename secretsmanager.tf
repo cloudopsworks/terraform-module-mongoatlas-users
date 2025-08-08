@@ -86,7 +86,7 @@ locals {
 # Secrets saving
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
   for_each    = var.users
-  description = nonsensitive("MongoDB User Credentials - ${local.mongodb_credentials[each.key].username} - ${local.mongodb_credentials[each.key].project_name}${try(local.mongodb_credentials[each.key].dbname, "") != "" ? format(" - %s", local.mongodb_credentials[each.key].dbname) : ""}")
+  description = "MongoDB User Credentials - ${local.user_names_list[each.key]} - ${local.project_name}${try(var.users[each.key].connection_strings.database_name, "") != "" ? format(" - %s", var.users[each.key].connection_strings.database_name) : ""}"
   name        = local.name_list[each.key]
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
