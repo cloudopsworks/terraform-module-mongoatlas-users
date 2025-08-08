@@ -5,7 +5,9 @@
 #
 
 resource "random_password" "randompass" {
-  for_each         = var.users
+  for_each = {
+    for k, v in var.users : k => v if var.rotation_lambda_name == ""
+  }
   length           = 20
   special          = false
   override_special = "=_-"
@@ -20,6 +22,20 @@ resource "random_password" "randompass" {
     ]
   }
 }
+
+resource "random_password" "randompass_rotated" {
+  for_each = {
+    for k, v in var.users : k => v if var.rotation_lambda_name != ""
+  }
+  length           = 20
+  special          = false
+  override_special = "=_-"
+  min_upper        = 2
+  min_special      = 0
+  min_numeric      = 2
+  min_lower        = 2
+}
+
 
 resource "time_rotating" "randompass" {
   for_each      = var.users
