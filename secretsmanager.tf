@@ -146,7 +146,8 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
   secret_string = jsonencode(each.value)
   lifecycle {
     ignore_changes = [
-      secret_string
+      secret_string,
+      version_stages
     ]
   }
 }
