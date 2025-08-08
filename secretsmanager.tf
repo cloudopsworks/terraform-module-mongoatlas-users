@@ -77,7 +77,7 @@ locals {
   name_list = {
     for k, v in var.users : k => format("%s/mongodbatlas/%s/%s-connstrings",
       local.secret_store_path,
-      lower(replace(replace(v.project_name, " ", ""), "_", "-")),
+      lower(replace(replace(local.project_name, " ", ""), "_", "-")),
       lower(replace(k, "_", "-")),
     )
   }
