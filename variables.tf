@@ -44,6 +44,6 @@ variable "extra_tags" {
   description = <<-EOD
   extra_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}.
   EOD
-  type    = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
