@@ -69,173 +69,227 @@ The module is designed to maintain security best practices while providing flexi
 Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-mongoatlas-users/releases).
 
 
-## Requirements
-- Terraform >= 1.0
-- MongoDB Atlas Account
-- MongoDB Atlas API Keys
-- AWS Account (for KMS and Lambda features)
+### Terragrunt Configuration
+To use this module in your Terragrunt configuration, you can include it in your `terragrunt.hcl` file:
 
-## Module Configuration
-
-### Basic Configuration
 ```hcl
-module "mongodb_users" {
-  source = "cloudopsworks/terraform-module-mongoatlas-users"
-
-  name_prefix = "prod"
-  project_id = "5f7c8..."
-
-  users = {
-    "app_user" = {
-      roles = [
-        {
-          role_name = "readWrite"
-          database_name = "application"
-        }
-      ]
-      password_rotation_period = 90
-    }
-  }
-  password_rotation_period = 30
-  secrets_kms_key_id = "alias/mongodb-users"
-}
-```
-
-### Available Variables
-
-| Variable | Description | Type | Default |
-|----------|-------------|------|---------|
-| name_prefix | Prefix for resource names | string | required |
-| project_id | MongoDB Atlas Project ID | string | "" |
-| project_name | MongoDB Atlas Project Name | string | "" |
-| users | User configurations map | map(any) | {} |
-| password_rotation_period | Default rotation period in days | number | 90 |
-| secrets_kms_key_id | AWS KMS key for encryption | string | null |
-| rotate_immediately | Trigger immediate rotation | bool | false |
-| force_reset | Force password reset | bool | false |
-
-## Quick Start
-
-1. Prerequisites:
-   - MongoDB Atlas Account and API Keys
-   - AWS Account (for KMS and Lambda features)
-   - Terraform >= 1.0 installed
-
-2. Configure MongoDB Atlas API access:
-   ```shell
-   export MONGODB_ATLAS_PUBLIC_KEY="your-public-key"
-   export MONGODB_ATLAS_PRIVATE_KEY="your-private-key"
-   ```
-
-3. Create a new Terraform configuration file (main.tf):
-   ```hcl
-   module "mongodb_users" {
-     source = "cloudopsworks/terraform-module-mongoatlas-users"
-
-     name_prefix = "dev"
-     project_id = "your-project-id"
-
-     users = {
-       "myuser" = {
-         roles = [
-           {
-             role_name = "readWrite"
-             database_name = "myapp"
-           }
-         ]
-       }
-     }
-     password_rotation_period = 30
-     secrets_kms_key_id = "alias/mongodb-users"
-   }
-   ```
-
-4. Initialize and apply:
-   ```shell
-   terraform init
-   terraform plan
-   terraform apply
-   ```
-
-5. Access user credentials:
-   - Credentials are stored in AWS Secrets Manager
-   - Use AWS CLI or SDK to retrieve credentials
-   - Rotation will occur automatically based on configured period
-
-
-## Examples
-
-## Basic Terragrunt Example
-```hcl
-include "root" {
-  path = find_in_parent_folders()
-}
-
 terraform {
   source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
 }
 
 inputs = {
-  name_prefix = "prod"
-  project_id = "5f7c8..."
+  # Organization and Environment Configuration
+  org = {
+    organization_name = "my-org"
+    organization_unit = "my-unit"
+    environment_type  = "prod"
+    environment_name  = "production"
+  }
+  is_hub    = false # (Optional) Whether this is a hub or spoke configuration. Default: false.
+  spoke_def = "001" # (Optional) Spoke definition. Default: "001".
+  extra_tags = {   # (Optional) Extra tags to apply to all resources. Default: {}.
+    "Owner" = "CloudOps"
+  }
+
+  # MongoDB Atlas Configuration
+  name_prefix  = "prod" # (Required) A prefix for the name of the cluster, used when username is not provided.
+  project_id   = "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "".
+  project_name = "my-project" # (Optional) The name of the project where the cluster will be created. Default: "".
+
+  # User Configuration (YAML Structure Documentation)
+  # users:
+  #   <user_key>:
+  #     username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name_prefix and system names.
+  #     name_prefix: "prefix1" # (Optional) If omitted var.name_prefix is used.
+  #     auth_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".
+  #     password_rotation_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password_rotation_period.
+  #     roles: # (Required) List of roles for the user.
+  #       - role_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.
+  #         database_name: "test" # (Required) Database to which the role applies.
+  #         collection_name: "test" # (Optional) Collection to which the role applies.
+  #     scopes: # (Optional) List of scopes for the user.
+  #       - name: "cluster-name" # (Required) Name of the cluster or data lake.
+  #         type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA_LAKE. Default: "CLUSTER".
+  #     connection_strings: # (Optional) Connection strings settings for the user.
+  #       enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.
+  #       cluster: "test" # (Required if enabled) Name of the cluster.
+  #       endpoint_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.
+  #       database_name: "mydatabase" # (Optional) Database name for the connection string.
+  users = {
+    "app-user" = {
+      roles = [
+        {
+          role_name     = "readWrite"
+          database_name = "app_db"
+        }
+      ]
+      connection_strings = {
+        enabled = true
+        cluster = "cluster0"
+      }
+    }
+  }
+
+  # Hoop Configuration (YAML Structure Documentation)
+  # hoop:
+  #   enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
+  #   agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
+  #   tags: # (Optional) List of tags for the Hoop connection.
+  #     - "tag1"
+  hoop = {
+    enabled = true
+    agent   = "aws-agent"
+    tags    = ["mongodb", "production"]
+  }
+
+  # Security and Rotation
+  secrets_kms_key_id       = "alias/aws/secretsmanager" # (Optional) KMS Key ID to encrypt secrets.
+  password_rotation_period = 90 # (Optional) Default password rotation period.
+  rotation_lambda_name     = "" # (Optional) Name of the lambda function to rotate the password.
+  rotation_duration        = "1h" # (Optional) Duration for the rotation lambda.
+  rotate_immediately       = false # (Optional) Rotate the password immediately.
+  force_reset              = false # (Optional) Force Reset the password.
+  run_hoop                 = false # (Optional) Run hoop with agent.
+}
+```
+
+### Full YAML Variables Documentation
+```yaml
+name_prefix: "atlas" # (Required) A prefix for the name of the cluster, used when username is not provided.
+project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "".
+project_name: "my-project" # (Optional) The name of the project where the cluster will be created. Default: "".
+users:
+  user1:
+    username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name_prefix and system names.
+    name_prefix: "prefix1" # (Optional) If omitted var.name_prefix is used.
+    auth_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".
+    password_rotation_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password_rotation_period.
+    roles: # (Required) List of roles for the user.
+      - role_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.
+        database_name: "test" # (Required) Database to which the role applies.
+        collection_name: "test" # (Optional) Collection to which the role applies.
+    scopes: # (Optional) List of scopes for the user.
+      - name: "cluster-name" # (Required) Name of the cluster or data lake.
+        type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA_LAKE. Default: "CLUSTER".
+    connection_strings: # (Optional) Connection strings settings for the user.
+      enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.
+      cluster: "test" # (Required if enabled) Name of the cluster.
+      endpoint_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.
+      database_name: "mydatabase" # (Optional) Database name for the connection string.
+hoop:
+  enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
+  agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
+  tags: # (Optional) List of tags for the Hoop connection.
+    - "tag1"
+run_hoop: false # (Optional) Run hoop with agent, be careful with this option. Default: false.
+rotation_lambda_name: "" # (Optional) Name of the lambda function to rotate the password. Default: "".
+password_rotation_period: 90 # (Optional) Password rotation period in days. Default: 90.
+rotation_duration: "1h" # (Optional) Duration of the lambda function to rotate the password. Default: "1h".
+rotate_immediately: false # (Optional) Rotate the password immediately. Default: false.
+force_reset: false # (Optional) Force Reset the password. Default: false.
+secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID to use to encrypt data in secrets. Default: null.
+org:
+  organization_name: "my-org" # (Required) Organization name.
+  organization_unit: "my-unit" # (Required) Organization unit.
+  environment_type: "prod" # (Required) Environment type.
+  environment_name: "production" # (Required) Environment name.
+is_hub: false # (Optional) Whether this is a hub or spoke configuration. Default: false.
+spoke_def: "001" # (Optional) Spoke definition. Default: "001".
+extra_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}.
+```
+
+## Quick Start
+
+1. **Terragrunt Setup**:
+   Create a `terragrunt.hcl` file in your infrastructure repository.
+
+2. **Configure Inputs**:
+   Define your organization, project, and user requirements in the `inputs` block.
+
+3. **Apply Configuration**:
+   ```shell
+   terragrunt run-all plan
+   terragrunt run-all apply
+   ```
+
+4. **Retrieve Credentials**:
+   Credentials will be automatically stored in AWS Secrets Manager under the path:
+   `/<org_unit>/<env_name>/<env_type>/mongodbatlas/<project_name>/<user_key>-connstrings`
+
+
+## Examples
+
+### Terragrunt Basic Example
+```hcl
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
+}
+
+inputs = {
+  org = {
+    organization_name = "cloudopsworks"
+    organization_unit = "devops"
+    environment_type  = "dev"
+    environment_name  = "development"
+  }
+  name_prefix = "dev"
+  project_id  = "5f7c8..."
 
   users = {
     "admin" = {
       roles = [
         {
-          role_name = "atlasAdmin"
+          role_name     = "atlasAdmin"
           database_name = "admin"
         }
       ]
-      password_rotation_period = 60
-    }
-    "reader" = {
-      roles = [
-        {
-          role_name = "read"
-          database_name = "reporting"
-        }
-      ]
-      password_rotation_period = 90
     }
   }
-  password_rotation_period = 30
-  secrets_kms_key_id = "alias/mongodb-users"
 }
 ```
 
-## Advanced Configuration Example
+### Terragrunt Advanced Example with Connection Strings and Hoop
 ```hcl
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
+}
+
 inputs = {
-  name_prefix = "staging"
-  project_id = "5f7c8..."
+  org = {
+    organization_name = "cloudopsworks"
+    organization_unit = "devops"
+    environment_type  = "prod"
+    environment_name  = "production"
+  }
+  name_prefix = "prod"
+  project_name = "production-project"
 
   users = {
-    "service_account" = {
-      username = "svc-app1"
+    "app-reader" = {
+      username      = "reader-svc"
+      auth_database = "admin"
       roles = [
         {
-          role_name = "readWrite"
-          database_name = "application"
-          collection_name = "orders"
-        }
-      ]
-      scopes = [
-        {
-          name = "cluster-1"
-          type = "CLUSTER"
+          role_name     = "read"
+          database_name = "app_db"
         }
       ]
       connection_strings = {
-        enabled = true
-        cluster = "cluster-1"
-        database_name = "application"
+        enabled     = true
+        cluster     = "cluster-prod"
+        endpoint_id = "vpce-0123456789abcdef"
       }
     }
   }
-  rotate_immediately = true
-  rotation_lambda_name = "mongodb-password-rotator"
-  rotation_duration = "2h"
+
+  hoop = {
+    enabled = true
+    agent   = "prod-agent"
+    tags    = ["atlas", "read-only"]
+  }
+
+  secrets_kms_key_id       = "arn:aws:kms:us-east-1:123456789012:key/mrk-..."
+  password_rotation_period = 30
 }
 ```
 
@@ -248,6 +302,9 @@ Available targets:
   help                                Help screen
   help/all                            Display help for all targets
   help/short                          This help short screen
+  init/aws                            Initialize the project for a specific cloud provider: AWS
+  init/azurerm                        Initialize the project for a specific cloud provider: Azure RM
+  init/gcp                            Initialize the project for a specific cloud provider: GCP
   lint                                Lint terraform/opentofu code
   tag                                 Tag the current version
 
@@ -257,8 +314,8 @@ Available targets:
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.89 |
-| <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 1.32 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
+| <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 2.1 |
 | <a name="requirement_null"></a> [null](#requirement\_null) | ~> 3.2 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.4 |
 | <a name="requirement_time"></a> [time](#requirement\_time) | ~> 0.13 |
@@ -267,11 +324,11 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 5.94.1 |
-| <a name="provider_mongodbatlas"></a> [mongodbatlas](#provider\_mongodbatlas) | 1.32.0 |
-| <a name="provider_null"></a> [null](#provider\_null) | 3.2.3 |
-| <a name="provider_random"></a> [random](#provider\_random) | 3.7.1 |
-| <a name="provider_time"></a> [time](#provider\_time) | 0.13.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.27.0 |
+| <a name="provider_mongodbatlas"></a> [mongodbatlas](#provider\_mongodbatlas) | 2.3.0 |
+| <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
+| <a name="provider_time"></a> [time](#provider\_time) | 0.13.1 |
 
 ## Modules
 
@@ -290,6 +347,7 @@ Available targets:
 | [mongodbatlas_database_user.this](https://registry.terraform.io/providers/mongodb/mongodbatlas/latest/docs/resources/database_user) | resource |
 | [null_resource.hoop_connection](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [random_password.randompass](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
+| [random_password.randompass_rotated](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
 | [time_rotating.randompass](https://registry.terraform.io/providers/hashicorp/time/latest/docs/resources/rotating) | resource |
 | [aws_lambda_function.rotation_function](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/lambda_function) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
@@ -304,22 +362,22 @@ Available targets:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | n/a | `map(string)` | `{}` | no |
-| <a name="input_force_reset"></a> [force\_reset](#input\_force\_reset) | (optional) Force Reset the password | `bool` | `false` | no |
-| <a name="input_hoop"></a> [hoop](#input\_hoop) | (optional) Hoop Settings for the module | `any` | `{}` | no |
-| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Establish this is a HUB or spoke configuration | `bool` | `false` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | (required) A prefix for the name of the cluster | `string` | n/a | yes |
-| <a name="input_org"></a> [org](#input\_org) | n/a | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_password_rotation_period"></a> [password\_rotation\_period](#input\_password\_rotation\_period) | (optional) Password rotation period in days | `number` | `90` | no |
-| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | (optional) The ID of the project where the cluster will be created | `string` | `""` | no |
-| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | (optional) The name of the project where the cluster will be created | `string` | `""` | no |
-| <a name="input_rotate_immediately"></a> [rotate\_immediately](#input\_rotate\_immediately) | (optional) Rotate the password immediately | `bool` | `false` | no |
-| <a name="input_rotation_duration"></a> [rotation\_duration](#input\_rotation\_duration) | (optional) Duration of the lambda function to rotate the password | `string` | `"1h"` | no |
-| <a name="input_rotation_lambda_name"></a> [rotation\_lambda\_name](#input\_rotation\_lambda\_name) | (optional) Name of the lambda function to rotate the password | `string` | `""` | no |
-| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null\_resource | `bool` | `false` | no |
-| <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | (optional) KMS Key ID to use to encrypt data in this secret, can be ARN or KMS Alias | `string` | `null` | no |
-| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | n/a | `string` | `"001"` | no |
-| <a name="input_users"></a> [users](#input\_users) | (required) Settings for the module | `any` | `{}` | no |
+| <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | extra\_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}. | `map(string)` | `{}` | no |
+| <a name="input_force_reset"></a> [force\_reset](#input\_force\_reset) | force\_reset: false # (Optional) Force Reset the password. Default: false. | `bool` | `false` | no |
+| <a name="input_hoop"></a> [hoop](#input\_hoop) | hoop:<br/>  enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.<br/>  agent: "my-agent" # (Required if enabled) Hoop.dev agent name.<br/>  tags: # (Optional) List of tags for the Hoop connection.<br/>    - "tag1" | `any` | `{}` | no |
+| <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | is\_hub: false # (Optional) Whether this is a hub or spoke configuration. Default: false. | `bool` | `false` | no |
+| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | name\_prefix: "atlas" # (Required) A prefix for the name of the cluster, used when username is not provided. | `string` | n/a | yes |
+| <a name="input_org"></a> [org](#input\_org) | org:<br/>  organization\_name: "my-org" # (Required) Organization name.<br/>  organization\_unit: "my-unit" # (Required) Organization unit.<br/>  environment\_type: "prod" # (Required) Environment type.<br/>  environment\_name: "production" # (Required) Environment name. | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
+| <a name="input_password_rotation_period"></a> [password\_rotation\_period](#input\_password\_rotation\_period) | password\_rotation\_period: 90 # (Optional) Password rotation period in days. Default: 90. | `number` | `90` | no |
+| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | project\_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "". | `string` | `""` | no |
+| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | project\_name: "my-project" # (Optional) The name of the project where the cluster will be created. Default: "". | `string` | `""` | no |
+| <a name="input_rotate_immediately"></a> [rotate\_immediately](#input\_rotate\_immediately) | rotate\_immediately: false # (Optional) Rotate the password immediately. Default: false. | `bool` | `false` | no |
+| <a name="input_rotation_duration"></a> [rotation\_duration](#input\_rotation\_duration) | rotation\_duration: "1h" # (Optional) Duration of the lambda function to rotate the password. Default: "1h". | `string` | `"1h"` | no |
+| <a name="input_rotation_lambda_name"></a> [rotation\_lambda\_name](#input\_rotation\_lambda\_name) | rotation\_lambda\_name: "" # (Optional) Name of the lambda function to rotate the password. Default: "". | `string` | `""` | no |
+| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | run\_hoop: false # (Optional) Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null\_resource. Default: false. | `bool` | `false` | no |
+| <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | secrets\_kms\_key\_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID to use to encrypt data in this secret, can be ARN or KMS Alias. Default: null. | `string` | `null` | no |
+| <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | spoke\_def: "001" # (Optional) Spoke definition. Default: "001". | `string` | `"001"` | no |
+| <a name="input_users"></a> [users](#input\_users) | users:<br/>  user1:<br/>    username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name\_prefix and system names.<br/>    name\_prefix: "prefix1" # (Optional) If omitted var.name\_prefix is used.<br/>    auth\_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".<br/>    password\_rotation\_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password\_rotation\_period.<br/>    roles: # (Required) List of roles for the user.<br/>      - role\_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.<br/>        database\_name: "test" # (Required) Database to which the role applies.<br/>        collection\_name: "test" # (Optional) Collection to which the role applies.<br/>    scopes: # (Optional) List of scopes for the user.<br/>      - name: "cluster-name" # (Required) Name of the cluster or data lake.<br/>        type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA\_LAKE. Default: "CLUSTER".<br/>    connection\_strings: # (Optional) Connection strings settings for the user.<br/>      enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.<br/>      cluster: "test" # (Required if enabled) Name of the cluster.<br/>      endpoint\_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.<br/>      database\_name: "mydatabase" # (Optional) Database name for the connection string. | `any` | `{}` | no |
 
 ## Outputs
 
