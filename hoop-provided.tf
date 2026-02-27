@@ -19,8 +19,9 @@ locals {
 }
 
 import {
-  id = local.connection_names[each.key]
-  to = module.hoop_connection[each.key].hoop_connection.this
+  for_each = local.connection_names
+  id       = local.connection_names[each.key]
+  to       = module.hoop_connection[each.key].hoop_connection.this
 }
 
 module "hoop_connection" {
