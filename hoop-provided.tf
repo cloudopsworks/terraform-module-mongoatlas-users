@@ -34,7 +34,7 @@ module "hoop_connection" {
   subtype  = "mongodb"
   agent_id = var.hoop.agent_id
   secrets = {
-    "envvar:CONNECTION_STRING" = "_aws:${aws_secretsmanager_secret.atlas_cred_conn[key].name}:${try(user.endpoint_id, "") != "" ? "private_" : ""}connection_string"
+    "envvar:CONNECTION_STRING" = "_aws:${aws_secretsmanager_secret.atlas_cred_conn[each.key].name}:${try(each.value.endpoint_id, "") != "" ? "private_" : ""}connection_string"
   }
   access_modes = {
     connect  = "enabled"
