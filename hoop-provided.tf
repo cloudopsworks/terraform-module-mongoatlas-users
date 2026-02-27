@@ -7,7 +7,6 @@
 #     Distributed Under Apache v2.0 License
 #
 
-
 module "hoop_connection" {
   for_each = {
     for key, role_user in local.mongodb_credentials : key => role_user
