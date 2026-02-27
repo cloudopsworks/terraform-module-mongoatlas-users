@@ -92,29 +92,30 @@ inputs = {
   }
 
   # MongoDB Atlas Configuration
-  name_prefix  = "prod" # (Required) A prefix for the name of the cluster, used when username is not provided.
-  project_id   = "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "".
-  project_name = "my-project" # (Optional) The name of the project where the cluster will be created. Default: "".
+  # Provide either `project_id` or `project_name`.
+  name_prefix  = "prod" # (Required) Prefix used to compose usernames when not explicitly provided.
+  project_id   = "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
+  project_name = "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
 
   # User Configuration (YAML Structure Documentation)
   # users:
   #   <user_key>:
-  #     username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name_prefix and system names.
-  #     name_prefix: "prefix1" # (Optional) If omitted var.name_prefix is used.
-  #     auth_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".
-  #     password_rotation_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password_rotation_period.
-  #     roles: # (Required) List of roles for the user.
-  #       - role_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.
-  #         database_name: "test" # (Required) Database to which the role applies.
-  #         collection_name: "test" # (Optional) Collection to which the role applies.
-  #     scopes: # (Optional) List of scopes for the user.
-  #       - name: "cluster-name" # (Required) Name of the cluster or data lake.
-  #         type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA_LAKE. Default: "CLUSTER".
-  #     connection_strings: # (Optional) Connection strings settings for the user.
-  #       enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.
-  #       cluster: "test" # (Required if enabled) Name of the cluster.
-  #       endpoint_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.
-  #       database_name: "mydatabase" # (Optional) Database name for the connection string.
+  #     username: "user1" # (Optional) Explicit username; otherwise generated as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`.
+  #     name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. Defaults to var.name_prefix.
+  #     auth_database: "admin" # (Optional) Authentication database. Default: "admin".
+  #     password_rotation_period: 90 # (Optional) Per-user rotation in days. Overrides var.password_rotation_period.
+  #     roles: # (Required) MongoDB roles granted to this user.
+  #       - role_name: "readWrite" # (Required) Common: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin.
+  #         database_name: "test" # (Required) Database the role applies to (e.g., "admin", "app_db").
+  #         collection_name: "widgets" # (Optional) Collection the role is scoped to.
+  #     scopes: # (Optional) Atlas scope bindings for the user.
+  #       - name: "cluster-name" # (Required) Cluster or data lake name.
+  #         type: "CLUSTER" # (Optional) Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
+  #     connection_strings: # (Optional) Store connection strings in Secrets Manager.
+  #       enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+  #       cluster: "cluster0" # (Required if enabled) Atlas Cluster name.
+  #       endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID for PrivateLink strings.
+  #       database_name: "mydatabase" # (Optional) Database name appended to the URI.
   users = {
     "app-user" = {
       roles = [
@@ -143,51 +144,52 @@ inputs = {
   }
 
   # Security and Rotation
-  secrets_kms_key_id       = "alias/aws/secretsmanager" # (Optional) KMS Key ID to encrypt secrets.
-  password_rotation_period = 90 # (Optional) Default password rotation period.
-  rotation_lambda_name     = "" # (Optional) Name of the lambda function to rotate the password.
-  rotation_duration        = "1h" # (Optional) Duration for the rotation lambda.
-  rotate_immediately       = false # (Optional) Rotate the password immediately.
-  force_reset              = false # (Optional) Force Reset the password.
-  run_hoop                 = false # (Optional) Run hoop with agent.
+  secrets_kms_key_id       = "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias for Secrets Manager encryption. Default: provider/account default.
+  password_rotation_period = 90 # (Optional) Default rotation in days for all users (1-365). Overridden per user via users[*].password_rotation_period.
+  rotation_lambda_name     = "" # (Optional) If set, enable AWS Secrets Manager rotation using this Lambda; if empty, local rotation is used.
+  rotation_duration        = "1h" # (Optional) Max rotation Lambda runtime. Format: "1h", "2h30m".
+  rotate_immediately       = false # (Optional) When rotation is enabled, rotate immediately on enable/update.
+  force_reset              = false # (Optional) Force-reset credentials (break-glass).
+  run_hoop                 = false # (Optional) Execute Hoop command via null_resource (side effect).
 }
 ```
 
 ### Full YAML Variables Documentation
 ```yaml
-name_prefix: "atlas" # (Required) A prefix for the name of the cluster, used when username is not provided.
-project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "".
-project_name: "my-project" # (Optional) The name of the project where the cluster will be created. Default: "".
+name_prefix: "atlas" # (Required) Prefix used to compose usernames when users[<key>].username is not provided. Allowed: lowercase letters, numbers, hyphens. No default.
+project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
+project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
 users:
-  user1:
-    username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name_prefix and system names.
-    name_prefix: "prefix1" # (Optional) If omitted var.name_prefix is used.
-    auth_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".
-    password_rotation_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password_rotation_period.
-    roles: # (Required) List of roles for the user.
-      - role_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.
-        database_name: "test" # (Required) Database to which the role applies.
-        collection_name: "test" # (Optional) Collection to which the role applies.
-    scopes: # (Optional) List of scopes for the user.
-      - name: "cluster-name" # (Required) Name of the cluster or data lake.
-        type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA_LAKE. Default: "CLUSTER".
-    connection_strings: # (Optional) Connection strings settings for the user.
-      enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.
-      cluster: "test" # (Required if enabled) Name of the cluster.
-      endpoint_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.
-      database_name: "mydatabase" # (Optional) Database name for the connection string.
+  <user_key>:
+    username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
+    name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
+    auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
+    password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
+    roles: # (Required) MongoDB roles granted to this user.
+      - role_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.
+        database_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app_db"). No default.
+        collection_name: "widgets" # (Optional) Collection the role is scoped to (if applicable). Default: null.
+    scopes: # (Optional) Atlas scope bindings for the user.
+      - name: "cluster-name" # (Required) Target cluster or data lake name. No default.
+        type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
+    connection_strings: # (Optional) Control generation of connection strings in Secrets Manager.
+      enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+      cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
+      endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
+      database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
 hoop:
-  enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
-  agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
-  tags: # (Optional) List of tags for the Hoop connection.
-    - "tag1"
-run_hoop: false # (Optional) Run hoop with agent, be careful with this option. Default: false.
-rotation_lambda_name: "" # (Optional) Name of the lambda function to rotate the password. Default: "".
-password_rotation_period: 90 # (Optional) Password rotation period in days. Default: 90.
-rotation_duration: "1h" # (Optional) Duration of the lambda function to rotate the password. Default: "1h".
-rotate_immediately: false # (Optional) Rotate the password immediately. Default: false.
-force_reset: false # (Optional) Force Reset the password. Default: false.
-secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID to use to encrypt data in secrets. Default: null.
+  enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
+  agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.
+  tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
+    - "mongodb"
+    - "production"
+run_hoop: false # (Optional) Execute Hoop command via null_resource (side effect). Default: false.
+rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, local rotation is used. Default: "".
+password_rotation_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.
+rotation_duration: "1h" # (Optional) Max runtime for the rotation Lambda. Format: "1h", "2h30m". Default: "1h".
+rotate_immediately: false # (Optional) When rotation is enabled (rotation_lambda_name != ""), rotate immediately on enable/update. Default: false.
+force_reset: false # (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false.
+secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null.
 org:
   organization_name: "my-org" # (Required) Organization name.
   organization_unit: "my-unit" # (Required) Organization unit.
@@ -334,6 +336,7 @@ Available targets:
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_hoop_connection"></a> [hoop\_connection](#module\_hoop\_connection) | ./hoop | n/a |
 | <a name="module_tags"></a> [tags](#module\_tags) | cloudopsworks/tags/local | 1.0.9 |
 
 ## Resources
@@ -363,21 +366,21 @@ Available targets:
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | extra\_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}. | `map(string)` | `{}` | no |
-| <a name="input_force_reset"></a> [force\_reset](#input\_force\_reset) | force\_reset: false # (Optional) Force Reset the password. Default: false. | `bool` | `false` | no |
-| <a name="input_hoop"></a> [hoop](#input\_hoop) | hoop:<br/>  enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.<br/>  agent: "my-agent" # (Required if enabled) Hoop.dev agent name.<br/>  tags: # (Optional) List of tags for the Hoop connection.<br/>    - "tag1" | `any` | `{}` | no |
+| <a name="input_force_reset"></a> [force\_reset](#input\_force\_reset) | force\_reset: false # (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false. | `bool` | `false` | no |
+| <a name="input_hoop"></a> [hoop](#input\_hoop) | hoop:<br/>  enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.<br/>  agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.<br/>  tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].<br/>    - "mongodb"<br/>    - "production" | `any` | `{}` | no |
 | <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | is\_hub: false # (Optional) Whether this is a hub or spoke configuration. Default: false. | `bool` | `false` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | name\_prefix: "atlas" # (Required) A prefix for the name of the cluster, used when username is not provided. | `string` | n/a | yes |
+| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | name\_prefix: "atlas" # (Required) Prefix used to compose usernames when `users[<key>].username` is not provided. Allowed: lowercase letters, numbers, and hyphens. No default. | `string` | n/a | yes |
 | <a name="input_org"></a> [org](#input\_org) | org:<br/>  organization\_name: "my-org" # (Required) Organization name.<br/>  organization\_unit: "my-unit" # (Required) Organization unit.<br/>  environment\_type: "prod" # (Required) Environment type.<br/>  environment\_name: "production" # (Required) Environment name. | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_password_rotation_period"></a> [password\_rotation\_period](#input\_password\_rotation\_period) | password\_rotation\_period: 90 # (Optional) Password rotation period in days. Default: 90. | `number` | `90` | no |
-| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | project\_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "". | `string` | `""` | no |
-| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | project\_name: "my-project" # (Optional) The name of the project where the cluster will be created. Default: "". | `string` | `""` | no |
-| <a name="input_rotate_immediately"></a> [rotate\_immediately](#input\_rotate\_immediately) | rotate\_immediately: false # (Optional) Rotate the password immediately. Default: false. | `bool` | `false` | no |
-| <a name="input_rotation_duration"></a> [rotation\_duration](#input\_rotation\_duration) | rotation\_duration: "1h" # (Optional) Duration of the lambda function to rotate the password. Default: "1h". | `string` | `"1h"` | no |
-| <a name="input_rotation_lambda_name"></a> [rotation\_lambda\_name](#input\_rotation\_lambda\_name) | rotation\_lambda\_name: "" # (Optional) Name of the lambda function to rotate the password. Default: "". | `string` | `""` | no |
-| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | run\_hoop: false # (Optional) Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null\_resource. Default: false. | `bool` | `false` | no |
-| <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | secrets\_kms\_key\_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID to use to encrypt data in this secret, can be ARN or KMS Alias. Default: null. | `string` | `null` | no |
+| <a name="input_password_rotation_period"></a> [password\_rotation\_period](#input\_password\_rotation\_period) | password\_rotation\_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90. | `number` | `90` | no |
+| <a name="input_project_id"></a> [project\_id](#input\_project\_id) | project\_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "". | `string` | `""` | no |
+| <a name="input_project_name"></a> [project\_name](#input\_project\_name) | project\_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "". | `string` | `""` | no |
+| <a name="input_rotate_immediately"></a> [rotate\_immediately](#input\_rotate\_immediately) | rotate\_immediately: false # (Optional) When rotation is enabled (rotation\_lambda\_name != ""), rotate immediately on enable/update. Default: false. | `bool` | `false` | no |
+| <a name="input_rotation_duration"></a> [rotation\_duration](#input\_rotation\_duration) | rotation\_duration: "1h" # (Optional) Max runtime for the rotation Lambda. Format: "1h", "2h30m" (AWS Secrets Manager duration). Default: "1h". | `string` | `"1h"` | no |
+| <a name="input_rotation_lambda_name"></a> [rotation\_lambda\_name](#input\_rotation\_lambda\_name) | rotation\_lambda\_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, passwords are rotated locally via `time_rotating`. Default: "". | `string` | `""` | no |
+| <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | run\_hoop: false # (Optional) Execute Hoop command via a null\_resource (side effect). Use with care. Default: false. | `bool` | `false` | no |
+| <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | secrets\_kms\_key\_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null. | `string` | `null` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | spoke\_def: "001" # (Optional) Spoke definition. Default: "001". | `string` | `"001"` | no |
-| <a name="input_users"></a> [users](#input\_users) | users:<br/>  user1:<br/>    username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name\_prefix and system names.<br/>    name\_prefix: "prefix1" # (Optional) If omitted var.name\_prefix is used.<br/>    auth\_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".<br/>    password\_rotation\_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password\_rotation\_period.<br/>    roles: # (Required) List of roles for the user.<br/>      - role\_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.<br/>        database\_name: "test" # (Required) Database to which the role applies.<br/>        collection\_name: "test" # (Optional) Collection to which the role applies.<br/>    scopes: # (Optional) List of scopes for the user.<br/>      - name: "cluster-name" # (Required) Name of the cluster or data lake.<br/>        type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA\_LAKE. Default: "CLUSTER".<br/>    connection\_strings: # (Optional) Connection strings settings for the user.<br/>      enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.<br/>      cluster: "test" # (Required if enabled) Name of the cluster.<br/>      endpoint\_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.<br/>      database\_name: "mydatabase" # (Optional) Database name for the connection string. | `any` | `{}` | no |
+| <a name="input_users"></a> [users](#input\_users) | users:<br/>  <user\_key>:<br/>    username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.<br/>    name\_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name\_prefix. Default: null.<br/>    auth\_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".<br/>    password\_rotation\_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password\_rotation\_period. Default: var.password\_rotation\_period.<br/>    roles: # (Required) MongoDB roles granted to this user.<br/>      - role\_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.<br/>        database\_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app\_db"). No default.<br/>        collection\_name: "widgets" # (Optional) Collection the role is scoped to (if applicable). Default: null.<br/>    scopes: # (Optional) Atlas scope bindings for the user.<br/>      - name: "cluster-name" # (Required) Target cluster or data lake name. No default.<br/>        type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA\_LAKE. Default: "CLUSTER".<br/>    connection\_strings: # (Optional) Control generation of connection strings in Secrets Manager.<br/>      enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.<br/>      cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.<br/>      endpoint\_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".<br/>      database\_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "". | `any` | `{}` | no |
 
 ## Outputs
 
@@ -418,7 +421,7 @@ Please use the [issue tracker](https://github.com/cloudopsworks/terraform-module
 
 ## Copyrights
 
-Copyright © 2024-2025 [Cloud Ops Works LLC](https://cloudops.works)
+Copyright © 2024-2026 [Cloud Ops Works LLC](https://cloudops.works)
 
 
 
