@@ -1,7 +1,10 @@
 ##
-# (c) 2024 - Cloud Ops Works LLC - https://cloudops.works/
-#            On GitHub: https://github.com/cloudopsworks
-#            Distributed Under Apache v2.0 License
+# (c) 2021-2025
+#     Cloud Ops Works LLC - https://cloudops.works/
+#     Find us on:
+#       GitHub: https://github.com/cloudopsworks
+#       WebSite: https://cloudops.works
+#     Distributed Under Apache v2.0 License
 #
 
 locals {
@@ -20,6 +23,12 @@ data "mongodbatlas_project" "this_id" {
   project_id = var.project_id
 }
 
+# Try to import existing users if enabled and project_id or project_name is provided, otherwise create new users with random passwords
+import {
+  for_each = var.users
+  to       = mongodbatlas_database_user.this[each.key]
+  id       = local.user_names_list[each.key]
+}
 
 resource "mongodbatlas_database_user" "this" {
   for_each           = var.users
