@@ -7,17 +7,29 @@
 #     Distributed Under Apache v2.0 License
 #
 
+locals {
+  connection_names = {
+    for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
+      lower(user.project_name),
+      lower(key),
+      lookup(local.default_roles, var.users[key].role_name, "default")
+    )
+    if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
+  }
+}
+
+import {
+  id = local.connection_names[each.key]
+  to = module.hoop_connection[each.key].hoop_connection.this
+}
+
 module "hoop_connection" {
   for_each = {
     for key, role_user in local.mongodb_credentials : key => role_user
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
   }
-  source = "./hoop"
-  name = format("mongo-db-%s-%s-%s",
-    lower(each.value.project_name),
-    lower(each.key),
-    lookup(local.default_roles, var.users[each.key].role_name, "default")
-  )
+  source   = "./hoop"
+  name     = local.connection_names[each.key]
   type     = "database"
   subtype  = "mongodb"
   agent_id = var.hoop.agent_id
