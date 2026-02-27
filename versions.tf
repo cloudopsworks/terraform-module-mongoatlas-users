@@ -31,5 +31,9 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.4"
     }
+    hoop = {
+      source  = "hoophq/hoop"
+      version = "~> 0.0.18"
+    }
   }
 }
