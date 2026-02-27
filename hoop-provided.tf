@@ -14,10 +14,11 @@ module "hoop_connection" {
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
   }
   source = "./hoop"
-  name = format("%s-%s-%s",
-    local.psql.server_name,
-    (try(each.value.db_ref, "") != "" ? postgresql_database.this[each.value.db_ref].name : each.value.database_name),
-  each.value.name)
+  name = format("mongo-db-%s-%s-%s",
+    lower(each.value.project_name),
+    lower(each.key),
+    lookup(local.default_roles, var.users[each.key].role_name, "default")
+  )
   type     = "database"
   subtype  = "mongodb"
   agent_id = var.hoop.agent_id
