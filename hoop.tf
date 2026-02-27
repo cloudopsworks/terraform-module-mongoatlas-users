@@ -8,8 +8,8 @@
 #
 
 locals {
-  hoop_tags = length(try(var.hoop.tags, [])) > 0 ? join(" ", [for v in var.hoop.tags : "--tags \"${v}\""]) : ""
-  hoop_connection = try(var.hoop.enabled, false) ? {
+  hoop_tags = length(try(var.hoop.tags, {})) > 0 ? join(" ", [for k, v in var.hoop.tags : "--tags \"${k}=${v}\""]) : ""
+  hoop_connection = try(var.hoop.enabled, false) && try(var.hoop.agent, "") != "" ? {
     for key, user in local.mongodb_credentials : key => nonsensitive(
       <<EOT
 hoop admin create connection mongo-db-${lower(user.project_name)}-${lower(key)}-${lookup(local.default_roles, var.users[key].role_name, "default")} \
