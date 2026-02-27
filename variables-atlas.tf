@@ -9,14 +9,14 @@
 
 variable "name_prefix" {
   description = <<-EOD
-  name_prefix: "atlas" # (Required) A prefix for the name of the cluster, used when username is not provided.
+  name_prefix: "atlas" # (Required) Prefix used to compose usernames when `users[<key>].username` is not provided. Allowed: lowercase letters, numbers, and hyphens. No default.
   EOD
   type        = string
 }
 
 variable "project_id" {
   description = <<-EOD
-  project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) The ID of the project where the cluster will be created. Default: "".
+  project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
   EOD
   type        = string
   default     = ""
@@ -24,7 +24,7 @@ variable "project_id" {
 
 variable "project_name" {
   description = <<-EOD
-  project_name: "my-project" # (Optional) The name of the project where the cluster will be created. Default: "".
+  project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
   EOD
   type        = string
   default     = ""
@@ -33,23 +33,23 @@ variable "project_name" {
 variable "users" {
   description = <<-EOD
   users:
-    user1:
-      username: "user1"  # (Optional) Uses this value for the name of the user. Default: generated using name_prefix and system names.
-      name_prefix: "prefix1" # (Optional) If omitted var.name_prefix is used.
-      auth_database: "admin" # (Optional) The database against which the user authenticates. Default: "admin".
-      password_rotation_period: 90 # (Optional) Password rotation period in days for this specific user. Default: var.password_rotation_period.
-      roles: # (Required) List of roles for the user.
-        - role_name: "readWrite" # (Required) Name of the role. Possible values: readWrite, read, dbAdmin, etc.
-          database_name: "test" # (Required) Database to which the role applies.
-          collection_name: "test" # (Optional) Collection to which the role applies.
-      scopes: # (Optional) List of scopes for the user.
-        - name: "cluster-name" # (Required) Name of the cluster or data lake.
-          type: "CLUSTER" # (Optional) Type of the scope. Possible values: CLUSTER, DATA_LAKE. Default: "CLUSTER".
-      connection_strings: # (Optional) Connection strings settings for the user.
-        enabled: false # (Optional) Whether to enable connection strings in secrets. Default: false.
-        cluster: "test" # (Required if enabled) Name of the cluster.
-        endpoint_id: "vpce-xxxxxyyyzzz" # (Optional) Private endpoint ID.
-        database_name: "mydatabase" # (Optional) Database name for the connection string.
+    <user_key>:
+      username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
+      name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
+      auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
+      password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
+      roles: # (Required) MongoDB roles granted to this user.
+        - role_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.
+          database_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app_db"). No default.
+          collection_name: "widgets" # (Optional) Collection the role is scoped to (if applicable). Default: null.
+      scopes: # (Optional) Atlas scope bindings for the user.
+        - name: "cluster-name" # (Required) Target cluster or data lake name. No default.
+          type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
+      connection_strings: # (Optional) Control generation of connection strings in Secrets Manager.
+        enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+        cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
+        endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
+        database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
   EOD
   type        = any
   default     = {}
@@ -58,10 +58,11 @@ variable "users" {
 variable "hoop" {
   description = <<-EOD
   hoop:
-    enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
-    agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
-    tags: # (Optional) List of tags for the Hoop connection.
-      - "tag1"
+    enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
+    agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.
+    tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
+      - "mongodb"
+      - "production"
   EOD
   type        = any
   default     = {}
@@ -69,7 +70,7 @@ variable "hoop" {
 
 variable "run_hoop" {
   description = <<-EOD
-  run_hoop: false # (Optional) Run hoop with agent, be careful with this option, it will run the HOOP command in output in a null_resource. Default: false.
+  run_hoop: false # (Optional) Execute Hoop command via a null_resource (side effect). Use with care. Default: false.
   EOD
   type        = bool
   default     = false
@@ -77,7 +78,7 @@ variable "run_hoop" {
 
 variable "rotation_lambda_name" {
   description = <<-EOD
-  rotation_lambda_name: "" # (Optional) Name of the lambda function to rotate the password. Default: "".
+  rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, passwords are rotated locally via `time_rotating`. Default: "".
   EOD
   type        = string
   default     = ""
@@ -86,7 +87,7 @@ variable "rotation_lambda_name" {
 
 variable "password_rotation_period" {
   description = <<-EOD
-  password_rotation_period: 90 # (Optional) Password rotation period in days. Default: 90.
+  password_rotation_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.
   EOD
   type        = number
   default     = 90
@@ -95,7 +96,7 @@ variable "password_rotation_period" {
 
 variable "rotation_duration" {
   description = <<-EOD
-  rotation_duration: "1h" # (Optional) Duration of the lambda function to rotate the password. Default: "1h".
+  rotation_duration: "1h" # (Optional) Max runtime for the rotation Lambda. Format: "1h", "2h30m" (AWS Secrets Manager duration). Default: "1h".
   EOD
   type        = string
   default     = "1h"
@@ -104,7 +105,7 @@ variable "rotation_duration" {
 
 variable "rotate_immediately" {
   description = <<-EOD
-  rotate_immediately: false # (Optional) Rotate the password immediately. Default: false.
+  rotate_immediately: false # (Optional) When rotation is enabled (rotation_lambda_name != ""), rotate immediately on enable/update. Default: false.
   EOD
   type        = bool
   default     = false
@@ -113,7 +114,7 @@ variable "rotate_immediately" {
 
 variable "force_reset" {
   description = <<-EOD
-  force_reset: false # (Optional) Force Reset the password. Default: false.
+  force_reset: false # (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false.
   EOD
   type        = bool
   default     = false
@@ -121,7 +122,7 @@ variable "force_reset" {
 
 variable "secrets_kms_key_id" {
   description = <<-EOD
-  secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID to use to encrypt data in this secret, can be ARN or KMS Alias. Default: null.
+  secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null.
   EOD
   type        = string
   default     = null
