@@ -8,19 +8,19 @@
 #
 
 locals {
-  connection_names = nonsensitive({
+  connection_names = {
     for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
       lower(user.project_name),
       lower(key),
       lookup(local.default_roles, var.users[key].role_name, "default")
     )
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
-  })
+  }
 }
 
 import {
   for_each = local.connection_names
-  id       = local.connection_names[each.key]
+  id       = nonsensitive(local.connection_names[each.key])
   to       = module.hoop_connection[each.key].hoop_connection.this
 }
 
