@@ -8,14 +8,14 @@
 #
 
 locals {
-  connection_names = {
+  connection_names = nonsensitive({
     for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
       lower(user.project_name),
       lower(key),
       lookup(local.default_roles, var.users[key].role_name, "default")
     )
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
-  }
+  })
 }
 
 import {
