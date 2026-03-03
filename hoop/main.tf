@@ -7,11 +7,6 @@
 #     Distributed Under Apache v2.0 License
 #
 
-import {
-  id = var.name
-  to = hoop_connection.this
-}
-
 resource "hoop_connection" "this" {
   name                 = var.name
   agent_id             = var.agent_id
