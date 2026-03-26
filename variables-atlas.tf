@@ -38,6 +38,8 @@ variable "users" {
       name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
       auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
       password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
+      import: false # (Optional) When true, imports an existing MongoDB Atlas user instead of creating a new one. Default: false.
+      role_name: "readwrite" # (Optional) Top-level primary role key used for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".
       roles: # (Required) MongoDB roles granted to this user.
         - role_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.
           database_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app_db"). No default.
@@ -50,6 +52,9 @@ variable "users" {
         cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
         endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
         database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
+      hoop: # (Optional) Per-user Hoop.dev integration overrides.
+        import: false # (Optional) When true, imports this user's existing Hoop connection instead of creating a new one. Default: false.
+        access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
   EOD
   type        = any
   default     = {}
@@ -59,10 +64,12 @@ variable "hoop" {
   description = <<-EOD
   hoop:
     enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
-    agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.
+    agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null_resource CLI command. No default.
+    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.
     tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
       - "mongodb"
       - "production"
+    access_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
   EOD
   type        = any
   default     = {}

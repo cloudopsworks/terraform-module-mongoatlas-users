@@ -8,11 +8,11 @@
   -->
 [![README Header][readme_header_img]][readme_header_link]
 
-[![cloudopsworks][logo]](https://cloudops.works/)
+[![cloudopsworks][logo]](https://cloudopsworks.co/)
 
 # Terraform MongoDB Atlas Users Management Module
 
-
+ [![Latest Release](https://img.shields.io/github/release/cloudopsworks/terraform-module-mongoatlas-users.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-mongoatlas-users/releases/latest) [![Last Updated](https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-mongoatlas-users.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-mongoatlas-users/commits)
 
 
 MongoDB Atlas Users Management Module provides comprehensive user management capabilities for MongoDB Atlas clusters. It features automated password rotation, role-based access control, and secure credential management through AWS KMS integration. The module supports multiple user configurations, custom rotation periods, and specialized scopes for precise access control.
@@ -22,15 +22,10 @@ MongoDB Atlas Users Management Module provides comprehensive user management cap
 
 This project is part of our comprehensive approach towards DevOps Acceleration. 
 [<img align="right" title="Share via Email" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/ios-mail.svg"/>][share_email]
-[<img align="right" title="Share on Google+" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-googleplus.svg" />][share_googleplus]
 [<img align="right" title="Share on Facebook" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-facebook.svg" />][share_facebook]
 [<img align="right" title="Share on Reddit" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-reddit.svg" />][share_reddit]
 [<img align="right" title="Share on LinkedIn" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-linkedin.svg" />][share_linkedin]
-[<img align="right" title="Share on Twitter" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
-
-
-[![Terraform Open Source Modules](https://docs.cloudops.works/images/terraform-open-source-modules.svg)][terraform_modules]
-
+[<img align="right" title="Share on X" width="24" height="24" src="https://docs.cloudops.works/images/ionicons/logo-twitter.svg" />][share_twitter]
 
 
 It's 100% Open Source and licensed under the [APACHE2](LICENSE).
@@ -104,6 +99,8 @@ inputs = {
   #     name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. Defaults to var.name_prefix.
   #     auth_database: "admin" # (Optional) Authentication database. Default: "admin".
   #     password_rotation_period: 90 # (Optional) Per-user rotation in days. Overrides var.password_rotation_period.
+  #     import: false # (Optional) When true, imports an existing Atlas user instead of creating. Default: false.
+  #     role_name: "readwrite" # (Optional) Top-level primary role key for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".
   #     roles: # (Required) MongoDB roles granted to this user.
   #       - role_name: "readWrite" # (Required) Common: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin.
   #         database_name: "test" # (Required) Database the role applies to (e.g., "admin", "app_db").
@@ -116,6 +113,9 @@ inputs = {
   #       cluster: "cluster0" # (Required if enabled) Atlas Cluster name.
   #       endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID for PrivateLink strings.
   #       database_name: "mydatabase" # (Optional) Database name appended to the URI.
+  #     hoop: # (Optional) Per-user Hoop.dev overrides.
+  #       import: false # (Optional) When true, imports this user's existing Hoop connection. Default: false.
+  #       access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
   users = {
     "app-user" = {
       roles = [
@@ -134,9 +134,11 @@ inputs = {
   # Hoop Configuration (YAML Structure Documentation)
   # hoop:
   #   enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
-  #   agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
-  #   tags: # (Optional) List of tags for the Hoop connection.
+  #   agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for null_resource CLI command.
+  #   agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based provisioning.
+  #   tags: # (Optional) List of tags for the Hoop connection. Default: [].
   #     - "tag1"
+  #   access_control: [] # (Optional) Global access control list for all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
   hoop = {
     enabled = true
     agent   = "aws-agent"
@@ -165,6 +167,8 @@ users:
     name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
     auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
     password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
+    import: false # (Optional) When true, imports an existing MongoDB Atlas user instead of creating a new one. Default: false.
+    role_name: "readwrite" # (Optional) Top-level primary role key used for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".
     roles: # (Required) MongoDB roles granted to this user.
       - role_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.
         database_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app_db"). No default.
@@ -177,12 +181,17 @@ users:
       cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
       endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
       database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
+    hoop: # (Optional) Per-user Hoop.dev integration overrides.
+      import: false # (Optional) When true, imports this user's existing Hoop connection instead of creating a new one. Default: false.
+      access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
 hoop:
   enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
-  agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.
+  agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null_resource CLI command. No default.
+  agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.
   tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
     - "mongodb"
     - "production"
+  access_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
 run_hoop: false # (Optional) Execute Hoop command via null_resource (side effect). Default: false.
 rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, local rotation is used. Default: "".
 password_rotation_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.
@@ -307,6 +316,8 @@ Available targets:
   init/aws                            Initialize the project for a specific cloud provider: AWS
   init/azurerm                        Initialize the project for a specific cloud provider: Azure RM
   init/gcp                            Initialize the project for a specific cloud provider: GCP
+  init/github                         Initialize the project for a specific cloud provider: Github Provider
+  init/mongodb                        Initialize the project for a specific cloud provider: MongoDB Atlas Provider
   lint                                Lint terraform/opentofu code
   tag                                 Tag the current version
 
@@ -317,6 +328,7 @@ Available targets:
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.4 |
+| <a name="requirement_hoop"></a> [hoop](#requirement\_hoop) | ~> 0.0.18 |
 | <a name="requirement_mongodbatlas"></a> [mongodbatlas](#requirement\_mongodbatlas) | ~> 2.1 |
 | <a name="requirement_null"></a> [null](#requirement\_null) | ~> 3.2 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.4 |
@@ -367,7 +379,7 @@ Available targets:
 |------|-------------|------|---------|:--------:|
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | extra\_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}. | `map(string)` | `{}` | no |
 | <a name="input_force_reset"></a> [force\_reset](#input\_force\_reset) | force\_reset: false # (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false. | `bool` | `false` | no |
-| <a name="input_hoop"></a> [hoop](#input\_hoop) | hoop:<br/>  enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.<br/>  agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.<br/>  tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].<br/>    - "mongodb"<br/>    - "production" | `any` | `{}` | no |
+| <a name="input_hoop"></a> [hoop](#input\_hoop) | hoop:<br/>  enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.<br/>  agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null\_resource CLI command. No default.<br/>  agent\_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.<br/>  tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].<br/>    - "mongodb"<br/>    - "production"<br/>  access\_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access\_control. Default: []. | `any` | `{}` | no |
 | <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | is\_hub: false # (Optional) Whether this is a hub or spoke configuration. Default: false. | `bool` | `false` | no |
 | <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | name\_prefix: "atlas" # (Required) Prefix used to compose usernames when `users[<key>].username` is not provided. Allowed: lowercase letters, numbers, and hyphens. No default. | `string` | n/a | yes |
 | <a name="input_org"></a> [org](#input\_org) | org:<br/>  organization\_name: "my-org" # (Required) Organization name.<br/>  organization\_unit: "my-unit" # (Required) Organization unit.<br/>  environment\_type: "prod" # (Required) Environment type.<br/>  environment\_name: "production" # (Required) Environment name. | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
@@ -380,7 +392,7 @@ Available targets:
 | <a name="input_run_hoop"></a> [run\_hoop](#input\_run\_hoop) | run\_hoop: false # (Optional) Execute Hoop command via a null\_resource (side effect). Use with care. Default: false. | `bool` | `false` | no |
 | <a name="input_secrets_kms_key_id"></a> [secrets\_kms\_key\_id](#input\_secrets\_kms\_key\_id) | secrets\_kms\_key\_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null. | `string` | `null` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | spoke\_def: "001" # (Optional) Spoke definition. Default: "001". | `string` | `"001"` | no |
-| <a name="input_users"></a> [users](#input\_users) | users:<br/>  <user\_key>:<br/>    username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.<br/>    name\_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name\_prefix. Default: null.<br/>    auth\_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".<br/>    password\_rotation\_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password\_rotation\_period. Default: var.password\_rotation\_period.<br/>    roles: # (Required) MongoDB roles granted to this user.<br/>      - role\_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.<br/>        database\_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app\_db"). No default.<br/>        collection\_name: "widgets" # (Optional) Collection the role is scoped to (if applicable). Default: null.<br/>    scopes: # (Optional) Atlas scope bindings for the user.<br/>      - name: "cluster-name" # (Required) Target cluster or data lake name. No default.<br/>        type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA\_LAKE. Default: "CLUSTER".<br/>    connection\_strings: # (Optional) Control generation of connection strings in Secrets Manager.<br/>      enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.<br/>      cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.<br/>      endpoint\_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".<br/>      database\_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "". | `any` | `{}` | no |
+| <a name="input_users"></a> [users](#input\_users) | users:<br/>  <user\_key>:<br/>    username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.<br/>    name\_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name\_prefix. Default: null.<br/>    auth\_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".<br/>    password\_rotation\_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password\_rotation\_period. Default: var.password\_rotation\_period.<br/>    import: false # (Optional) When true, imports an existing MongoDB Atlas user instead of creating a new one. Default: false.<br/>    role\_name: "readwrite" # (Optional) Top-level primary role key used for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".<br/>    roles: # (Required) MongoDB roles granted to this user.<br/>      - role\_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.<br/>        database\_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app\_db"). No default.<br/>        collection\_name: "widgets" # (Optional) Collection the role is scoped to (if applicable). Default: null.<br/>    scopes: # (Optional) Atlas scope bindings for the user.<br/>      - name: "cluster-name" # (Required) Target cluster or data lake name. No default.<br/>        type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA\_LAKE. Default: "CLUSTER".<br/>    connection\_strings: # (Optional) Control generation of connection strings in Secrets Manager.<br/>      enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.<br/>      cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.<br/>      endpoint\_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".<br/>      database\_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".<br/>    hoop: # (Optional) Per-user Hoop.dev integration overrides.<br/>      import: false # (Optional) When true, imports this user's existing Hoop connection instead of creating a new one. Default: false.<br/>      access\_control: [] # (Optional) Per-user access control list merged with global hoop.access\_control. Default: []. | `any` | `{}` | no |
 
 ## Outputs
 
@@ -397,10 +409,9 @@ Available targets:
 
 File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-mongoatlas-users/issues), send us an [email][email] or join our [Slack Community][slack].
 
-[![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
 ## DevOps Tools
-
+[]()
 ## Slack Community
 
 
@@ -478,32 +489,31 @@ This project is maintained by [Cloud Ops Works LLC][website].
 [![README Footer][readme_footer_img]][readme_footer_link]
 [![Beacon][beacon]][website]
 
-  [logo]: https://cloudops.works/logo-300x69.svg
-  [docs]: https://cowk.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=docs
-  [website]: https://cowk.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=website
-  [github]: https://cowk.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=github
-  [jobs]: https://cowk.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=jobs
-  [hire]: https://cowk.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=hire
-  [slack]: https://cowk.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=slack
-  [linkedin]: https://cowk.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=linkedin
-  [twitter]: https://cowk.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=twitter
-  [testimonial]: https://cowk.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=testimonial
-  [office_hours]: https://cloudops.works/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=office_hours
-  [newsletter]: https://cowk.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=newsletter
-  [email]: https://cowk.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=email
-  [commercial_support]: https://cowk.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=commercial_support
-  [we_love_open_source]: https://cowk.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=we_love_open_source
-  [terraform_modules]: https://cowk.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=terraform_modules
-  [readme_header_img]: https://cloudops.works/readme/header/img
-  [readme_header_link]: https://cloudops.works/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_header_link
-  [readme_footer_img]: https://cloudops.works/readme/footer/img
-  [readme_footer_link]: https://cloudops.works/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_footer_link
-  [readme_commercial_support_img]: https://cloudops.works/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudops.works/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=Terraform+MongoDB+Atlas+Users+Management+Module&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
+  [logo]: https://cloudopsworks.co/images/main-logo.png
+  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=docs
+  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=website
+  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=github
+  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=jobs
+  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=hire
+  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=slack
+  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=linkedin
+  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=x
+  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=testimonial
+  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=office_hours
+  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=newsletter
+  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=email
+  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=commercial_support
+  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=we_love_open_source
+  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=terraform_modules
+  [readme_header_img]: https://cloudopsworks.co/images/readme-header.png
+  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_header_link
+  [readme_footer_img]: https://cloudopsworks.co/images/main-logo-footer.png
+  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_footer_link
+  [readme_commercial_support_img]: https://cloudopsworks.co/readme/commercial-support/img
+  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-mongoatlas-users&utm_content=readme_commercial_support_link
+  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+MongoDB+Atlas+Users+Management+Module&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
   [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+MongoDB+Atlas+Users+Management+Module&url=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
   [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
   [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
   [share_email]: mailto:?subject=Terraform+MongoDB+Atlas+Users+Management+Module&body=https://github.com/cloudopsworks/terraform-module-mongoatlas-users
-  [beacon]: https://ga-beacon.cloudops.works/G-7XWMFVFXZT/cloudopsworks/terraform-module-mongoatlas-users?pixel&cs=github&cm=readme&an=terraform-module-mongoatlas-users
+  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-mongoatlas-users?pixel&cs=github&cm=readme&an=terraform-module-mongoatlas-users

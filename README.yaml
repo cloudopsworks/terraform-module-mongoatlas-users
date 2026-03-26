@@ -1,5 +1,12 @@
 name: Terraform MongoDB Atlas Users Management Module
 #logo: logo/logo.jpg
+badges:
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudopsworks/terraform-module-mongoatlas-users.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-users/releases/latest
+  - name: Last Updated
+    image: https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-mongoatlas-users.svg?style=for-the-badge
+    url: https://github.com/cloudopsworks/terraform-module-mongoatlas-users/commits
 
 license: "APACHE2"
 
@@ -64,6 +71,8 @@ usage: |-
     #     name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. Defaults to var.name_prefix.
     #     auth_database: "admin" # (Optional) Authentication database. Default: "admin".
     #     password_rotation_period: 90 # (Optional) Per-user rotation in days. Overrides var.password_rotation_period.
+    #     import: false # (Optional) When true, imports an existing Atlas user instead of creating. Default: false.
+    #     role_name: "readwrite" # (Optional) Top-level primary role key for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".
     #     roles: # (Required) MongoDB roles granted to this user.
     #       - role_name: "readWrite" # (Required) Common: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin.
     #         database_name: "test" # (Required) Database the role applies to (e.g., "admin", "app_db").
@@ -76,6 +85,9 @@ usage: |-
     #       cluster: "cluster0" # (Required if enabled) Atlas Cluster name.
     #       endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID for PrivateLink strings.
     #       database_name: "mydatabase" # (Optional) Database name appended to the URI.
+    #     hoop: # (Optional) Per-user Hoop.dev overrides.
+    #       import: false # (Optional) When true, imports this user's existing Hoop connection. Default: false.
+    #       access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
     users = {
       "app-user" = {
         roles = [
@@ -94,9 +106,11 @@ usage: |-
     # Hoop Configuration (YAML Structure Documentation)
     # hoop:
     #   enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
-    #   agent: "my-agent" # (Required if enabled) Hoop.dev agent name.
-    #   tags: # (Optional) List of tags for the Hoop connection.
+    #   agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for null_resource CLI command.
+    #   agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based provisioning.
+    #   tags: # (Optional) List of tags for the Hoop connection. Default: [].
     #     - "tag1"
+    #   access_control: [] # (Optional) Global access control list for all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
     hoop = {
       enabled = true
       agent   = "aws-agent"
@@ -125,6 +139,8 @@ usage: |-
       name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
       auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
       password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
+      import: false # (Optional) When true, imports an existing MongoDB Atlas user instead of creating a new one. Default: false.
+      role_name: "readwrite" # (Optional) Top-level primary role key used for Hoop connection naming. Allowed: readwrite, read, dbadmin, admin, dbowner, owner, clusteradmin. Default: "default".
       roles: # (Required) MongoDB roles granted to this user.
         - role_name: "readWrite" # (Required) Built-in or custom role name. Common built-ins: read, readWrite, dbAdmin, dbOwner, userAdmin, clusterAdmin. No default.
           database_name: "test" # (Required) Database that the role applies to (e.g., "admin", "test", "app_db"). No default.
@@ -137,12 +153,17 @@ usage: |-
         cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
         endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
         database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
+      hoop: # (Optional) Per-user Hoop.dev integration overrides.
+        import: false # (Optional) When true, imports this user's existing Hoop connection instead of creating a new one. Default: false.
+        access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
   hoop:
     enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
-    agent: "my-agent" # (Required if enabled) Hoop.dev agent name to use for the tunnel/session. No default.
+    agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null_resource CLI command. No default.
+    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.
     tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
       - "mongodb"
       - "production"
+    access_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
   run_hoop: false # (Optional) Execute Hoop command via null_resource (side effect). Default: false.
   rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, local rotation is used. Default: "".
   password_rotation_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.

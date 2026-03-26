@@ -8,18 +8,26 @@
 #
 
 locals {
+  connection_names_imported = {
+    for key, user in var.users : key => format("mongo-db-%s-%s-%s",
+      lower(replace(replace(local.project_name, " ", ""), "_", "-")),
+      lower(replace(key, "_", "-")),
+      lookup(local.default_roles, user.role_name, "default")
+    )
+    if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != "" && (try(user.import, false) || try(user.hoop.import, false))
+  }
   connection_names = {
-    for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
-      lower(user.project_name),
-      lower(key),
-      lookup(local.default_roles, var.users[key].role_name, "default")
+    for key, user in var.users : key => format("mongo-db-%s-%s-%s",
+      lower(replace(replace(local.project_name, " ", ""), "_", "-")),
+      lower(replace(key, "_", "-")),
+      lookup(local.default_roles, user.role_name, "default")
     )
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != ""
   }
 }
 
 import {
-  for_each = local.connection_names
+  for_each = local.connection_names_imported
   id       = nonsensitive(local.connection_names[each.key])
   to       = module.hoop_connection[each.key].hoop_connection.this
 }
@@ -44,5 +52,5 @@ module "hoop_connection" {
     schema   = "enabled"
   }
   tags           = var.hoop.tags
-  access_control = setunion(toset(try(var.hoop.access_control, [])), toset(try(each.value.hoop.access_control, [])))
+  access_control = setunion(toset(try(var.hoop.access_control, [])), toset(try(var.users[each.key].hoop.access_control, [])))
 }
