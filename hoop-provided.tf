@@ -8,6 +8,14 @@
 #
 
 locals {
+  connection_names_imported = {
+    for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
+      lower(user.project_name),
+      lower(key),
+      lookup(local.default_roles, var.users[key].role_name, "default")
+    )
+    if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != "" && try(user.import, false)
+  }
   connection_names = {
     for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
       lower(user.project_name),
@@ -19,7 +27,7 @@ locals {
 }
 
 import {
-  for_each = local.connection_names
+  for_each = local.connection_names_imported
   id       = nonsensitive(local.connection_names[each.key])
   to       = module.hoop_connection[each.key].hoop_connection.this
 }

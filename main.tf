@@ -25,9 +25,11 @@ data "mongodbatlas_project" "this_id" {
 
 # Try to import existing users if enabled and project_id or project_name is provided, otherwise create new users with random passwords
 import {
-  for_each = var.users
+  for_each = {
+    for key, user in var.users : key => user if try(user.import, false)
+  }
   to       = mongodbatlas_database_user.this[each.key]
-  id       = local.user_names_list[each.key]
+  id       = format("%s/%s/%s", local.project_id, local.user_names_list[each.key], try(each.value.auth_database, "admin"))
 }
 
 resource "mongodbatlas_database_user" "this" {
