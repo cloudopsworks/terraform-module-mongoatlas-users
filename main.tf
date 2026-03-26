@@ -28,8 +28,8 @@ import {
   for_each = {
     for key, user in var.users : key => user if try(user.import, false)
   }
-  to       = mongodbatlas_database_user.this[each.key]
-  id       = format("%s/%s/%s", local.project_id, local.user_names_list[each.key], try(each.value.auth_database, "admin"))
+  to = mongodbatlas_database_user.this[each.key]
+  id = format("%s/%s/%s", local.project_id, local.user_names_list[each.key], try(each.value.auth_database, "admin"))
 }
 
 resource "mongodbatlas_database_user" "this" {
