@@ -9,10 +9,10 @@
 
 locals {
   connection_names_imported = {
-    for key, user in local.mongodb_credentials : key => format("mongo-db-%s-%s-%s",
-      lower(user.project_name),
-      lower(key),
-      lookup(local.default_roles, var.users[key].role_name, "default")
+    for key, user in var.users : key => format("mongo-db-%s-%s-%s",
+      lower(replace(replace(local.project_name, " ", ""), "_", "-")),
+      lower(replace(key, "_", "-")),
+      lookup(local.default_roles, user.role_name, "default")
     )
     if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != "" && try(user.import, false)
   }
