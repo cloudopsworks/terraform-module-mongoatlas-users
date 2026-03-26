@@ -14,7 +14,7 @@ locals {
       lower(replace(key, "_", "-")),
       lookup(local.default_roles, user.role_name, "default")
     )
-    if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != "" && try(user.import, false)
+    if try(var.hoop.enabled, false) && try(var.hoop.agent_id, "") != "" && (try(user.import, false) || try(user.hoop.import, false))
   }
   connection_names = {
     for key, user in var.users : key => format("mongo-db-%s-%s-%s",
