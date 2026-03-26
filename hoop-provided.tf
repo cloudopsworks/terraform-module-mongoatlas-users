@@ -52,5 +52,5 @@ module "hoop_connection" {
     schema   = "enabled"
   }
   tags           = var.hoop.tags
-  access_control = setunion(toset(try(var.hoop.access_control, [])), toset(try(each.value.hoop.access_control, [])))
+  access_control = setunion(toset(try(var.hoop.access_control, [])), toset(try(var.users[each.key].hoop.access_control, [])))
 }
