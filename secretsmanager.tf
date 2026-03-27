@@ -90,7 +90,7 @@ locals {
 resource "aws_secretsmanager_secret" "atlas_cred_conn" {
   for_each    = var.users
   description = "MongoDB User Credentials - ${local.user_names_list[each.key]} - ${local.project_name}${try(var.users[each.key].connection_strings.database_name, "") != "" ? format(" - %s", var.users[each.key].connection_strings.database_name) : ""}"
-  name        = local.name_list[each.key]
+  name        = nonsensitive(local.name_list[each.key])
   kms_key_id  = var.secrets_kms_key_id
   tags = merge(local.all_tags, {
     "mongodb-username" = local.user_names_list[each.key]
@@ -107,8 +107,12 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn" {
   for_each = {
     for k, v in var.users : k => v if var.rotation_lambda_name == ""
   }
-  secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(local.mongodb_credentials[each.key])
+  secret_id      = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
+  secret_string  = jsonencode(local.mongodb_credentials[each.key])
+  version_stages = ["AWSCURRENT"]
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 ## Rotation Enabled
@@ -147,13 +151,15 @@ resource "aws_secretsmanager_secret_version" "atlas_cred_conn_rotated" {
   for_each = {
     for k, v in var.users : k => v if var.rotation_lambda_name != ""
   }
-  secret_id     = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
-  secret_string = jsonencode(local.mongodb_credentials[each.key])
+  secret_id      = aws_secretsmanager_secret.atlas_cred_conn[each.key].id
+  secret_string  = jsonencode(local.mongodb_credentials[each.key])
+  version_stages = ["AWSCURRENT"]
   lifecycle {
     ignore_changes = [
       secret_string,
       version_stages
     ]
+    create_before_destroy = true
   }
 }
 
