@@ -20,7 +20,7 @@ locals {
     clusteradmin = "ca"
   }
   pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
-    for ep in try(v.connection_strings.0.private_endpoint, []) : "${k}-${ep.endpoints[0].endpoint_id}" => {
+    for ep in try(v.connection_strings.private_endpoint, []) : "${k}-${ep.endpoints[0].endpoint_id}" => {
       connection     = try(ep.connection_string, "")
       srv_connection = try(ep.srv_connection_string, "")
       pvt            = split("/", try(ep.connection_string, ""))
@@ -31,10 +31,10 @@ locals {
   ]...)
   connection_strings_arrs = {
     for k, v in data.mongodbatlas_advanced_cluster.cluster : k => {
-      plain        = try(v.connection_strings.0.standard, v.connection_strings.standard, "")
-      plain_srv    = try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, "")
-      standard     = split("/", try(v.connection_strings.0.standard, v.connection_strings.standard, ""))
-      standard_srv = split("/", try(v.connection_strings.0.standard_srv, v.connection_strings.standard_srv, ""))
+      plain        = try(v.connection_strings.standard, v.connection_strings.standard, "")
+      plain_srv    = try(v.connection_strings.standard_srv, v.connection_strings.standard_srv, "")
+      standard     = split("/", try(v.connection_strings.standard, v.connection_strings.standard, ""))
+      standard_srv = split("/", try(v.connection_strings.standard_srv, v.connection_strings.standard_srv, ""))
     }
   }
   user_passwords = {
