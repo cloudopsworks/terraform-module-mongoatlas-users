@@ -18,7 +18,11 @@ This document provides instructions for AI Agents working with the implementatio
 
 ## Implementation Repository Guidelines
 
-- **Avoid to modify**: Avoid at all costs, do not modify `locals-vars.tf`, `variables.tf`, and any files originating from the cloud provider boilerplate (e.g., `aws.tf`, `google.tf`, `azurerm.tf`, `variables-azurerm.tf`, `locals.tf`) in `.cloudopsworks/boilerplate/` (except `versions.tf`).
+- **Use make as been provided**: All commands should be run from the root of the repository.
+- **Avoid to modify**: Avoid modifying the following: 
+  - Any files originating from the cloud provider boilerplate (e.g., `aws.tf`, `google.tf`, `azurerm.tf`, `variables-azurerm.tf`, `locals.tf`) in `.cloudopsworks/boilerplate/` (except `versions.tf`).
+  - Anything under `.cloudopsworks/boilerplate/`
+  - `locals-vars.tf`, `variables.tf`, `AGENTS.md`, `CLAUDE.md`, `.github/**`, `Makefile`, `.gitignore`, `gitversion.yaml`
 - **Use variables-module.tf**:
   - Rename the word `module` in `variables-module.tf` with a proper subname depending on the purpose of this module.
   - The subname must be no more than 12 chars (e.g., `variables-vpc.tf`).
@@ -74,16 +78,17 @@ Module versioning follows GitHub Flow — a simplified branching model where fea
 - **Never push directly to `master`**. All changes must flow through feature or hotfix branches and be merged via pull requests.
 - Follow [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`) for all module tags.
 - There is no `develop` branch — all work flows directly through feature branches to `master`. This approach simplifies the development workflow and enables continuous integration and deployment from the main branch.
+- Avoid in the commit comments explicitly mentioning `+semver:` changes within changesets, describe it with other words. The semver annotations should only be present in commit messages and PR descriptions to trigger the correct version bump in CI.
 
 ### Semver Commit Annotations
 
 To trigger the correct version bump in CI, include a semver annotation in your commit message or PR description:
 
-| Change Type             | Annotation keywords                        |
-|-------------------------|--------------------------------------------|
-| Major / breaking change | `+semver: major` or `+semver: breaking`    |
-| Minor / feature change  | `+semver: minor` or `+semver: feature`     |
-| Fix / patch change      | `+semver: fix` or `+semver: patch`         |
+| Change Type             | Annotation keywords                                           |
+|-------------------------|---------------------------------------------------------------|
+| Major / breaking change | `+semver: major`                                              |
+| Minor / feature change  | `+semver: minor` or `+semver: feature` or `+semver: breaking` |
+| Fix / patch change      | `+semver: fix` or `+semver: patch`                            |
 
 Example commit messages:
 ```
@@ -112,35 +117,66 @@ All new features and provider version upgrades branch directly from `master` usi
 
 For provider upgrades, increment the semver digit accordingly: **MAJOR** for breaking provider changes (e.g., AWS `4.x` → `5.x`), **MINOR** for backwards-compatible upgrades.
 
-### Workflow Version Upgrades (Minor or Major)
+### Workflow Version Upgrades and Documentation Fixes (Patch)
 
-Upgrades to the workflow version itself — whether minor or major — follow the same GitHub Flow feature branch process as any other change:
+Workflow upgrades and documentation-only fixes are patch-level changes and use the **hotfix** branch type, not feature branches:
 
-1. Create a feature branch from `master`:
+1. Start a hotfix branch from `master`:
    ```sh
-   make gitflow/feature/start-no-develop:<feature-name>
+   make gitflow/hotfix/start
    ```
-   Use a descriptive name such as `workflow-upgrade-v2` or `github-flow-migration`.
-2. Apply the workflow version changes and validate:
+2. Apply changes (run `make repos/upgrade` for template upgrades, then update docs as needed):
    ```sh
-   make fmt
-   make lint
+   make repos/upgrade   # pulls latest template version
+   # edit .boilerplate/inputs.yaml, README.yaml, etc.
+   make readme          # regenerate README.md last
    ```
-3. Finish the feature — this merges it back into `master` via pull request:
+3. Commit using conventional commits with `+semver: patch`:
    ```sh
-   make gitflow/feature/finish-no-develop:<feature-name>
+   git commit -m "docs: sync inputs.yaml and update docs +semver: patch"
    ```
+4. **Publish first**, then finish — the finish step requires the branch to exist on the remote:
+   ```sh
+   make gitflow/hotfix/publish   # push branch to remote (required before finish)
+   make gitflow/hotfix/finish    # creates the PR
+   ```
+5. Wait for all CI checks to pass, then merge with `gh` CLI (see [PR Merge Guidelines](#pr-merge-guidelines)).
+
+### PR Merge Guidelines
+
+After all CI checks pass, merge using `gh pr merge` with a proper merge commit:
+
+```sh
+gh pr merge <PR_NUMBER> --repo <owner/repo> --merge \
+  --subject "chore: merge <branch> - <short description> +semver: patch" \
+  --body "$(cat <<'EOF'
+## Summary
+
+- Bullet point summary of changes
+
++semver: patch
+EOF
+)" --delete-branch=false
+```
+
+Key rules:
+- Always use `--merge` (never `--squash` or `--rebase`) to preserve commit history.
+- Include `+semver: <level>` in the **body** (not just the title) so GitVersion picks it up.
+- Use `--delete-branch=false` when you only want to delete the local branch (do so separately with `git branch -d <branch>`).
+- After merge, checkout and pull master: `git checkout master && git pull origin master`.
 
 ### Summary Table
 
-| Change Type                              | Branch Type | Merges Into | Semver Impact | Annotation                          |
-|------------------------------------------|-------------|-------------|---------------|-------------------------------------|
-| Workflow version upgrade (minor/major)   | `feature`   | `master`    | PATCH / MINOR | `+semver: patch` / `+semver: minor` |
-| Provider major version upgrade           | `feature`   | `master`    | MAJOR         | `+semver: major`                    |
-| Provider minor/patch version upgrade     | `feature`   | `master`    | MINOR / PATCH | `+semver: minor` / `+semver: patch` |
-| New module feature                       | `feature`   | `master`    | MINOR         | `+semver: feature`                  |
-| Bug fix                                  | `feature`   | `master`    | PATCH         | `+semver: fix`                      |
-| Breaking / incompatible change           | `feature`   | `master`    | MAJOR         | `+semver: breaking`                 |
+| Change Type                             | Branch Type | Merges Into | Semver Impact | Annotation                          |
+|-----------------------------------------|-------------|-------------|---------------|-------------------------------------|
+| Workflow version upgrade (patch)        | `hotfix`    | `master`    | PATCH         | `+semver: patch`                    |
+| Workflow version upgrade (minor/major)  | `feature`   | `master`    | MINOR         | `+semver: patch`                    |
+| Documentation fix / inputs.yaml sync    | `hotfix`    | `master`    | PATCH         | `+semver: patch`                    |
+| Provider major version upgrade          | `feature`   | `master`    | MAJOR         | `+semver: breaking`                 |
+| Provider minor/patch version upgrade    | `feature`   | `master`    | MINOR / PATCH | `+semver: minor` / `+semver: patch` |
+| New module feature                      | `feature`   | `master`    | MINOR         | `+semver: feature`                  |
+| Bug fix                                 | `feature`   | `master`    | PATCH         | `+semver: fix`                      |
+| Breaking / incompatible change          | `feature`   | `master`    | MAJOR         | `+semver: breaking`                 |
 
 
 ## Documentation Guidelines
@@ -156,6 +192,9 @@ Upgrades to the workflow version itself — whether minor or major — follow th
     ```yaml
     id: "sampleid"   # (Required) Unique identifier for the resource.
     ```
+    - If the attribute is a complex object, document as a YAML block before the variable declaration as commented lines.
+    - For attributes that accept a predefined set of values (e.g., `state` with possible values `present` or `absent`), include a comment listing the valid options.
+    - Description must contain the marker of optionality and default value. Avoid embedding complex YAML descriptions, make a general description, then add the specifics in the comments.
   - Infer and document the possible values for each attribute using the upstream Terraform provider documentation as the source.
 - **README.yaml fields**: Once inline documentation is complete, update `README.yaml` to properly document the following fields:
   - `name`
@@ -164,17 +203,21 @@ Upgrades to the workflow version itself — whether minor or major — follow th
   - `usage` — write examples using Terragrunt HCL; avoid plain Terraform HCL. Include all module variables with their full inline-documented YAML structure.
   - `examples` and `quickstart`
 - **Updates**: Apply the same criteria above whenever new variables or resources are added to the module.
+  - copyrights.year: if not specified or blank, set "2021", should be an year not a range, if there is a year specified leave it as is.
+  - badges: adjust the badge.image links to point to the correct repository (owner/repo).
 - **README.md generation**: Run `make readme` as the **last step** after all documentation updates are complete.
 
 ### `.boilerplate/inputs.yaml` Guidelines
 
 The `.boilerplate/inputs.yaml` file is the per-deployment configuration file loaded by `terragrunt.hcl` as `local.local_vars`. It must be kept in sync with the module's `variables-*.tf` files and serve as self-documenting configuration for operators.
 
-- **Scope**: Include only **module-specific** variables — those defined in `variables-module.tf` (or its renamed equivalent). Do **not** include variables that the Terragrunt hierarchy supplies automatically:
-  - `is_hub` — injected by the boilerplate/template engine
-  - `spoke_def` — sourced from `spoke-inputs.yaml`
-  - `org` — sourced from `env-inputs.yaml`
-  - `extra_tags` — built from merged tag files
+- **Scope**: Include **all** module-specific variables — those defined in `variables-module.tf` (or its renamed equivalent variables-*.tf).
+  - Include **both scalar top-level variables** (e.g., `name`, `name_prefix`, `project_id`, `run_hoop`) **and** complex object variables (e.g., `settings`). A common mistake is to only document the complex object and forget the plain scalars.
+  - Do **not** include variables that the Terragrunt hierarchy supplies automatically:
+    - `is_hub` — injected by the boilerplate/template engine
+    - `spoke_def` — sourced from `spoke-inputs.yaml`
+    - `org` — sourced from `env-inputs.yaml`
+    - `extra_tags` — built from merged tag files
 - **Comment format**: Mirror the `(Required)` / `(Optional)` YAML comment style used in `variables-*.tf`. For every key, add an inline comment with:
   - Whether it is required or optional
   - A short description
