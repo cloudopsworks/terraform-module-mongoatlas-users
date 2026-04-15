@@ -125,12 +125,6 @@ usage: |-
     password_externally_managed = false # (Optional) When true, sets an initial password but skips time_rotating. Use when an external system manages rotation.
     force_reset                 = false # (Optional) Force-reset credentials (break-glass).
   }
-
-    # Password Management
-    password_rotation_period    = 90    # (Optional) Default rotation in days for all users (1-365). Overridden per user via users[*].password_rotation_period.
-    password_externally_managed = false # (Optional) When true, sets an initial password but skips time_rotating. Use when an external system manages rotation.
-    force_reset                 = false # (Optional) Force-reset credentials (break-glass).
-  }
   ```
 
   ### Full YAML Variables Documentation

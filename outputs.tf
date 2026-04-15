@@ -31,10 +31,10 @@ output "hoop_output" {
     agent_id = var.hoop.agent_id
     connections = {
       for key, user in var.users : key => {
-        name  = local.connection_names[key]
-        type  = "database"
+        name    = local.connection_names[key]
+        type    = "database"
         subtype = "mongodb"
-        tags  = try(var.hoop.tags, {})
+        tags    = try(var.hoop.tags, {})
         access_control = setunion(
           toset(try(var.hoop.access_control, [])),
           toset(try(user.hoop.access_control, []))
