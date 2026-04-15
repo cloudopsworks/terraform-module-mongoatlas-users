@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -9,7 +9,7 @@
 
 resource "random_password" "randompass" {
   for_each = {
-    for k, v in var.users : k => v if var.rotation_lambda_name == ""
+    for k, v in var.users : k => v if !var.password_externally_managed
   }
   length           = 20
   special          = false
@@ -26,9 +26,9 @@ resource "random_password" "randompass" {
   }
 }
 
-resource "random_password" "randompass_rotated" {
+resource "random_password" "randompass_external" {
   for_each = {
-    for k, v in var.users : k => v if var.rotation_lambda_name != ""
+    for k, v in var.users : k => v if var.password_externally_managed
   }
   length           = 20
   special          = false
@@ -38,7 +38,6 @@ resource "random_password" "randompass_rotated" {
   min_numeric      = 2
   min_lower        = 2
 }
-
 
 resource "time_rotating" "randompass" {
   for_each      = var.users

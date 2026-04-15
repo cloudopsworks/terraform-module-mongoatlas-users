@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -30,6 +30,15 @@ variable "project_name" {
   default     = ""
 }
 
+variable "region" {
+  description = <<-EOD
+  region: "us-east-1" # (Optional) Cloud provider region identifier used in system_name_short composition for username generation. Passed from cloud-specific wrapper modules. Default: "".
+  EOD
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 variable "users" {
   description = <<-EOD
   users:
@@ -48,7 +57,7 @@ variable "users" {
         - name: "cluster-name" # (Required) Target cluster or data lake name. No default.
           type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
       connection_strings: # (Optional) Control generation of connection strings in Secrets Manager.
-        enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+        enabled: false # (Optional) When true, include connection strings in credentials output. Default: false.
         cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
         endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
         database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
@@ -63,33 +72,14 @@ variable "users" {
 variable "hoop" {
   description = <<-EOD
   hoop:
-    enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
-    agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null_resource CLI command. No default.
-    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.
-    tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
-      - "mongodb"
-      - "production"
+    enabled: false # (Optional) Enable Hoop.dev connection metadata output. Default: false.
+    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for hoop_output generation. No default.
+    tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: {}.
+      key: "value"
     access_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
   EOD
   type        = any
   default     = {}
-}
-
-variable "run_hoop" {
-  description = <<-EOD
-  run_hoop: false # (Optional) Execute Hoop command via a null_resource (side effect). Use with care. Default: false.
-  EOD
-  type        = bool
-  default     = false
-}
-
-variable "rotation_lambda_name" {
-  description = <<-EOD
-  rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, passwords are rotated locally via `time_rotating`. Default: "".
-  EOD
-  type        = string
-  default     = ""
-  nullable    = false
 }
 
 variable "password_rotation_period" {
@@ -101,18 +91,9 @@ variable "password_rotation_period" {
   nullable    = false
 }
 
-variable "rotation_duration" {
+variable "password_externally_managed" {
   description = <<-EOD
-  rotation_duration: "1h" # (Optional) Max runtime for the rotation Lambda. Format: "1h", "2h30m" (AWS Secrets Manager duration). Default: "1h".
-  EOD
-  type        = string
-  default     = "1h"
-  nullable    = false
-}
-
-variable "rotate_immediately" {
-  description = <<-EOD
-  rotate_immediately: false # (Optional) When rotation is enabled (rotation_lambda_name != ""), rotate immediately on enable/update. Default: false.
+  password_externally_managed: false # (Optional) When true, the module sets an initial password but does not auto-rotate via time_rotating. Use when an external system (e.g. AWS Lambda, GCP Cloud Function, Azure Function) manages password rotation. Default: false.
   EOD
   type        = bool
   default     = false
@@ -125,12 +106,4 @@ variable "force_reset" {
   EOD
   type        = bool
   default     = false
-}
-
-variable "secrets_kms_key_id" {
-  description = <<-EOD
-  secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null.
-  EOD
-  type        = string
-  default     = null
 }

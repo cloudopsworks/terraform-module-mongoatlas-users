@@ -1,4 +1,4 @@
-name: Terraform MongoDB Atlas Users Management Module
+name: Terraform MongoDB Atlas Users Management Module (Generic)
 #logo: logo/logo.jpg
 badges:
   - name: Latest Release
@@ -18,21 +18,24 @@ copyrights:
 github_repo: cloudopsworks/terraform-module-mongoatlas-users
 
 description: |-
-  MongoDB Atlas Users Management Module provides comprehensive user management capabilities for MongoDB Atlas clusters. It features automated password rotation, role-based access control, and secure credential management through AWS KMS integration. The module supports multiple user configurations, custom rotation periods, and specialized scopes for precise access control.
+  Generic MongoDB Atlas Users Management Module provides cloud-provider-agnostic user management for MongoDB Atlas clusters. It handles automated password rotation, role-based access control, and outputs structured credentials for consumption by cloud-specific wrapper modules (aws-users, gcp-users, azurerm-users). The module supports multiple user configurations, custom rotation periods, and specialized scopes for precise access control.
 
 # Introduction to the project
 introduction: |-
-  This Terraform module provides a robust solution for managing MongoDB Atlas users and their security configurations. Key features include:
+  This Terraform module provides a cloud-provider-agnostic solution for managing MongoDB Atlas users and their security configurations. Key features include:
 
   - Automated user creation and management
-  - Customizable password rotation policies with AWS Lambda integration
+  - Customizable password rotation policies via `time_rotating`
+  - Support for externally-managed password rotation (e.g. AWS Lambda, GCP Cloud Function, Azure Function)
   - Role-based access control with granular permissions
   - Support for project and cluster-level scopes
-  - AWS KMS integration for secure credential storage
+  - Structured credential output (`credentials`) for consumption by cloud-specific secret store modules
+  - Hoop.dev connection metadata output (`hoop_output`) for use with `terraform-module-hoop-connection`
   - Custom connection string generation
-  - Compliance-ready password management
 
-  The module is designed to maintain security best practices while providing flexibility in user access management across MongoDB Atlas environments.
+  This module has **no AWS, GCP, or Azure provider dependencies**. Use the cloud-specific wrapper modules
+  (`terraform-module-aws-mongoatlas-users`, `terraform-module-gcp-mongoatlas-users`,
+  `terraform-module-azurerm-mongoatlas-users`) to store credentials in the appropriate secret store.
 
 # How to use this project
 usage: |-
@@ -41,7 +44,7 @@ usage: |-
 
   ```hcl
   terraform {
-    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v2.0.0"
   }
 
   inputs = {
@@ -63,6 +66,7 @@ usage: |-
     name_prefix  = "prod" # (Required) Prefix used to compose usernames when not explicitly provided.
     project_id   = "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
     project_name = "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
+    region       = "us-east-1" # (Optional) Cloud provider region for username generation. Passed from cloud-specific wrapper modules. Default: "".
 
     # User Configuration (YAML Structure Documentation)
     # users:
@@ -80,8 +84,8 @@ usage: |-
     #     scopes: # (Optional) Atlas scope bindings for the user.
     #       - name: "cluster-name" # (Required) Cluster or data lake name.
     #         type: "CLUSTER" # (Optional) Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
-    #     connection_strings: # (Optional) Store connection strings in Secrets Manager.
-    #       enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+    #     connection_strings: # (Optional) Include connection strings in credentials output.
+    #       enabled: false # (Optional) When true, include public/private connection strings for `cluster`. Default: false.
     #       cluster: "cluster0" # (Required if enabled) Atlas Cluster name.
     #       endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID for PrivateLink strings.
     #       database_name: "mydatabase" # (Optional) Database name appended to the URI.
@@ -105,26 +109,21 @@ usage: |-
 
     # Hoop Configuration (YAML Structure Documentation)
     # hoop:
-    #   enabled: false # (Optional) Whether to enable Hoop.dev connection. Default: false.
-    #   agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for null_resource CLI command.
-    #   agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based provisioning.
-    #   tags: # (Optional) List of tags for the Hoop connection. Default: [].
-    #     - "tag1"
+    #   enabled: false # (Optional) Whether to enable Hoop.dev connection metadata output. Default: false.
+    #   agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for hoop_output generation.
+    #   tags: # (Optional) Free-form tags for Hoop connections. Default: {}.
+    #     key: "value"
     #   access_control: [] # (Optional) Global access control list for all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
     hoop = {
-      enabled = true
-      agent   = "aws-agent"
-      tags    = ["mongodb", "production"]
+      enabled  = true
+      agent_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      tags     = { environment = "production" }
     }
 
-    # Security and Rotation
-    secrets_kms_key_id       = "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias for Secrets Manager encryption. Default: provider/account default.
-    password_rotation_period = 90 # (Optional) Default rotation in days for all users (1-365). Overridden per user via users[*].password_rotation_period.
-    rotation_lambda_name     = "" # (Optional) If set, enable AWS Secrets Manager rotation using this Lambda; if empty, local rotation is used.
-    rotation_duration        = "1h" # (Optional) Max rotation Lambda runtime. Format: "1h", "2h30m".
-    rotate_immediately       = false # (Optional) When rotation is enabled, rotate immediately on enable/update.
-    force_reset              = false # (Optional) Force-reset credentials (break-glass).
-    run_hoop                 = false # (Optional) Execute Hoop command via null_resource (side effect).
+    # Password Management
+    password_rotation_period    = 90    # (Optional) Default rotation in days for all users (1-365). Overridden per user via users[*].password_rotation_period.
+    password_externally_managed = false # (Optional) When true, sets an initial password but skips time_rotating. Use when an external system manages rotation.
+    force_reset                 = false # (Optional) Force-reset credentials (break-glass).
   }
   ```
 
@@ -133,6 +132,7 @@ usage: |-
   name_prefix: "atlas" # (Required) Prefix used to compose usernames when users[<key>].username is not provided. Allowed: lowercase letters, numbers, hyphens. No default.
   project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
   project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
+  region: "us-east-1" # (Optional) Cloud provider region for username generation. Passed from cloud-specific wrapper modules. Default: "".
   users:
     <user_key>:
       username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
@@ -148,8 +148,8 @@ usage: |-
       scopes: # (Optional) Atlas scope bindings for the user.
         - name: "cluster-name" # (Required) Target cluster or data lake name. No default.
           type: "CLUSTER" # (Optional) Scope type. Allowed: CLUSTER, DATA_LAKE. Default: "CLUSTER".
-      connection_strings: # (Optional) Control generation of connection strings in Secrets Manager.
-        enabled: false # (Optional) When true, store public/private connection strings for `cluster`. Default: false.
+      connection_strings: # (Optional) Include connection strings in credentials output.
+        enabled: false # (Optional) When true, include public/private connection strings for `cluster`. Default: false.
         cluster: "cluster0" # (Required if enabled) Atlas Cluster name used to resolve connection strings. No default.
         endpoint_id: "vpce-0123456789abcdef" # (Optional) Private endpoint ID to build PrivateLink connection strings. Default: "".
         database_name: "mydatabase" # (Optional) Database name appended in the connection string. Default: "".
@@ -157,20 +157,15 @@ usage: |-
         import: false # (Optional) When true, imports this user's existing Hoop connection instead of creating a new one. Default: false.
         access_control: [] # (Optional) Per-user access control list merged with global hoop.access_control. Default: [].
   hoop:
-    enabled: false # (Optional) Enable Hoop.dev connection helper output and resources. Default: false.
-    agent: "my-agent" # (Required if using legacy CLI approach) Hoop.dev agent name for the null_resource CLI command. No default.
-    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for module-based connection provisioning. No default.
-    tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: [].
-      - "mongodb"
-      - "production"
+    enabled: false # (Optional) Enable Hoop.dev connection metadata output. Default: false.
+    agent_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # (Required if enabled) Hoop.dev agent ID (UUID) for hoop_output generation. No default.
+    tags: # (Optional) Free-form tags to annotate the Hoop connection. Default: {}.
+      key: "value"
     access_control: [] # (Optional) Global access control list applied to all Hoop connections. Merged with per-user users[*].hoop.access_control. Default: [].
-  run_hoop: false # (Optional) Execute Hoop command via null_resource (side effect). Default: false.
-  rotation_lambda_name: "" # (Optional) Name of the AWS Lambda used by Secrets Manager for credential rotation. When set, rotation is managed by Secrets Manager; when empty, local rotation is used. Default: "".
   password_rotation_period: 90 # (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.
-  rotation_duration: "1h" # (Optional) Max runtime for the rotation Lambda. Format: "1h", "2h30m". Default: "1h".
-  rotate_immediately: false # (Optional) When rotation is enabled (rotation_lambda_name != ""), rotate immediately on enable/update. Default: false.
+  password_externally_managed: false # (Optional) When true, sets an initial password but skips time_rotating rotation. Use when an external system manages rotation. Default: false.
   force_reset: false # (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false.
-  secrets_kms_key_id: "alias/aws/secretsmanager" # (Optional) KMS Key ID/ARN or Alias used for AWS Secrets Manager encryption. Examples: "alias/aws/secretsmanager", "arn:aws:kms:us-east-1:123456789012:key/mrk-...". Default: null.
+  region: "us-east-1" # (Optional) Cloud provider region identifier for username generation. Default: "".
   org:
     organization_name: "my-org" # (Required) Organization name.
     organization_unit: "my-unit" # (Required) Organization unit.
@@ -186,7 +181,7 @@ examples: |-
   ### Terragrunt Basic Example
   ```hcl
   terraform {
-    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v2.0.0"
   }
 
   inputs = {
@@ -212,10 +207,10 @@ examples: |-
   }
   ```
 
-  ### Terragrunt Advanced Example with Connection Strings and Hoop
+  ### Terragrunt Advanced Example with Connection Strings and Hoop Output
   ```hcl
   terraform {
-    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v1.0.0"
+    source = "git::https://github.com/cloudopsworks/terraform-module-mongoatlas-users.git?ref=v2.0.0"
   }
 
   inputs = {
@@ -225,8 +220,9 @@ examples: |-
       environment_type  = "prod"
       environment_name  = "production"
     }
-    name_prefix = "prod"
+    name_prefix  = "prod"
     project_name = "production-project"
+    region       = "us-east-1"
 
     users = {
       "app-reader" = {
@@ -243,16 +239,18 @@ examples: |-
           cluster     = "cluster-prod"
           endpoint_id = "vpce-0123456789abcdef"
         }
+        hoop = {
+          access_control = ["team-backend"]
+        }
       }
     }
 
     hoop = {
-      enabled = true
-      agent   = "prod-agent"
-      tags    = ["atlas", "read-only"]
+      enabled  = true
+      agent_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      tags     = { environment = "production", team = "backend" }
     }
 
-    secrets_kms_key_id       = "arn:aws:kms:us-east-1:123456789012:key/mrk-..."
     password_rotation_period = 30
   }
   ```
@@ -271,9 +269,17 @@ quickstart: |-
      terragrunt run-all apply
      ```
 
-  4. **Retrieve Credentials**:
-     Credentials will be automatically stored in AWS Secrets Manager under the path:
-     `/<org_unit>/<env_name>/<env_type>/mongodbatlas/<project_name>/<user_key>-connstrings`
+  4. **Consume Credentials**:
+     The module outputs a `credentials` map (sensitive) and a `users` map (non-sensitive metadata).
+     Pass `credentials` to the appropriate cloud-specific module for secret store storage:
+     - `terraform-module-aws-mongoatlas-users` — stores in AWS Secrets Manager
+     - `terraform-module-gcp-mongoatlas-users` — stores in GCP Secret Manager
+     - `terraform-module-azurerm-mongoatlas-users` — stores in Azure Key Vault
+
+  5. **Hoop.dev Integration**:
+     When `hoop.enabled = true` and `hoop.agent_id` is set, the `hoop_output` output provides
+     connection metadata that cloud-specific wrapper modules enrich with secret store references
+     before passing to `terraform-module-hoop-connection`.
 
 include:
   - "docs/targets.md"

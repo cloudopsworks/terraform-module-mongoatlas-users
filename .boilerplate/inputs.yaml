@@ -1,18 +1,22 @@
 # Module configuration
 # Required variables
-{{- range .requiredVariables }}
-{{- if ne .Name "org"}}
-# Description {{ .Description }} , Type: {{ .Type }}
-{{ .Name }}: {{ .DefaultValuePlaceholder }}
-{{- end }}
+# (Required) Prefix used to compose usernames when `users[<key>].username` is not provided. Allowed: lowercase letters, numbers, and hyphens. No default.
+name_prefix: "atlas"
 
-{{- end }}
 # Optional variables
-{{- range .optionalVariables }}
-{{- if ne .Name "is_hub" "spoke_def" "extra_args" }}
-# Description {{ .Description }} , Type: {{ .Type }}
-#{{ .Name }}: {{ .DefaultValue }}
-{{- end }}
-
-{{- end }}
-
+# (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
+#project_id: ""
+# (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
+#project_name: ""
+# (Optional) Cloud provider region identifier used in system_name_short composition for username generation. Passed from cloud-specific wrapper modules. Default: "".
+#region: ""
+# (Optional) MongoDB Atlas users configuration. See README.yaml for full structure. Default: {}.
+#users: {}
+# (Optional) Hoop.dev connection metadata configuration. See README.yaml for full structure. Default: {}.
+#hoop: {}
+# (Optional) Default rotation period in days for all users (overridden by `users[*].password_rotation_period`). Allowed: 1-365. Default: 90.
+#password_rotation_period: 90
+# (Optional) When true, sets an initial password but does not auto-rotate via time_rotating. Use when an external system manages password rotation. Default: false.
+#password_externally_managed: false
+# (Optional) Force-reset credentials even if unchanged (useful for break-glass scenarios). Default: false.
+#force_reset: false

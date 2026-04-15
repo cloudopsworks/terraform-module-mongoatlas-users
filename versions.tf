@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -9,15 +9,10 @@
 
 terraform {
   required_version = ">= 1.3"
-  # Complete with required providers for the module
   required_providers {
     mongodbatlas = {
       source  = "mongodb/mongodbatlas"
       version = "~> 2.1"
-    }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.4"
     }
     null = {
       source  = "hashicorp/null"
@@ -30,10 +25,6 @@ terraform {
     random = {
       source  = "hashicorp/random"
       version = "~> 3.4"
-    }
-    hoop = {
-      source  = "hoophq/hoop"
-      version = "~> 0.0.18"
     }
   }
 }

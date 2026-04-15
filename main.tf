@@ -1,5 +1,5 @@
 ##
-# (c) 2021-2025
+# (c) 2021-2026
 #     Cloud Ops Works LLC - https://cloudops.works/
 #     Find us on:
 #       GitHub: https://github.com/cloudopsworks
@@ -10,6 +10,14 @@
 locals {
   user_names_list = {
     for k, v in var.users : k => try(v.username, format("%s-%s-%s", try(v.name_prefix, var.name_prefix), local.system_name_short, k))
+  }
+  connection_names = {
+    for key, user in var.users : key => format("mongo-db-%s-%s-%s",
+      lower(replace(replace(local.project_name, " ", ""), "_", "-")),
+      lower(replace(key, "_", "-")),
+      lookup(local.default_roles, try(user.role_name, "default"), "default")
+    )
+    if try(var.hoop.enabled, false)
   }
 }
 
@@ -23,21 +31,12 @@ data "mongodbatlas_project" "this_id" {
   project_id = var.project_id
 }
 
-# Try to import existing users if enabled and project_id or project_name is provided, otherwise create new users with random passwords
-import {
-  for_each = {
-    for key, user in var.users : key => user if try(user.import, false)
-  }
-  to = mongodbatlas_database_user.this[each.key]
-  id = format("%s/%s/%s", local.project_id, local.user_names_list[each.key], try(each.value.auth_database, "admin"))
-}
-
 resource "mongodbatlas_database_user" "this" {
   for_each           = var.users
   auth_database_name = try(each.value.auth_database, "admin")
   project_id         = local.project_id
   username           = local.user_names_list[each.key]
-  password           = var.rotation_lambda_name == "" ? random_password.randompass[each.key].result : random_password.randompass_rotated[each.key].result
+  password           = var.password_externally_managed ? random_password.randompass_external[each.key].result : random_password.randompass[each.key].result
 
   dynamic "roles" {
     for_each = try(each.value.roles, [])
