@@ -40,7 +40,7 @@ resource "random_password" "randompass_external" {
 }
 
 resource "time_rotating" "randompass" {
-  for_each      = {
+  for_each = {
     for k, v in var.users : k => v if !var.password_externally_managed
   }
   rotation_days = try(each.value.password_rotation_period, var.password_rotation_period)
