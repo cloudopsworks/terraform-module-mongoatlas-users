@@ -20,13 +20,14 @@ locals {
     clusteradmin = "ca"
   }
   pvt_endpoints = merge([for k, v in data.mongodbatlas_advanced_cluster.cluster : {
-    for ep in try(v.connection_strings.private_endpoint, []) : "${k}-${ep.endpoints[0].endpoint_id}" => {
+    for ep in coalesce(try(v.connection_strings.private_endpoint, null), []) : "${k}-${ep.endpoints[0].endpoint_id}" => {
       connection     = try(ep.connection_string, "")
       srv_connection = try(ep.srv_connection_string, "")
       pvt            = split("/", try(ep.connection_string, ""))
       pvt_srv        = split("/", try(ep.srv_connection_string, ""))
       endpoint_id    = ep.endpoints[0].endpoint_id
     }
+    if try(ep.endpoints[0].endpoint_id, "") != ""
     }
   ]...)
   connection_strings_arrs = {
