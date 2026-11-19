@@ -8,8 +8,6 @@ name_prefix: "atlas"
 #project_id: ""
 # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
 #project_name: ""
-# (Optional) Cloud provider region identifier used in system_name_short composition for username generation. Passed from cloud-specific wrapper modules. Default: "".
-#region: ""
 # (Optional) MongoDB Atlas users configuration. See README.yaml for full structure. Default: {}.
 #users: {}
 # (Optional) Hoop.dev connection metadata configuration. See README.yaml for full structure. Default: {}.

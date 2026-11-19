@@ -30,15 +30,6 @@ variable "project_name" {
   default     = ""
 }
 
-variable "region" {
-  description = <<-EOD
-  region: "us-east-1" # (Optional) Cloud provider region identifier used in system_name_short composition for username generation. Passed from cloud-specific wrapper modules. Default: "".
-  EOD
-  type        = string
-  default     = ""
-  nullable    = false
-}
-
 variable "users" {
   description = <<-EOD
   users:

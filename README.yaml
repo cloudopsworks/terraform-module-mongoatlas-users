@@ -74,8 +74,6 @@ usage: |-
   #project_id: ""
   # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
   #project_name: ""
-  # (Optional) Cloud provider region identifier used in system_name_short composition for username generation. Passed from cloud-specific wrapper modules. Default: "".
-  #region: ""
   # (Optional) MongoDB Atlas users configuration. See variable reference below for full structure. Default: {}.
   #users: {}
   # (Optional) Hoop.dev connection metadata configuration. See variable reference below for full structure. Default: {}.
@@ -154,7 +152,6 @@ usage: |-
     name_prefix = local.local_vars.name_prefix
     project_id  = dependency.project.outputs.project_id
     project_name                = try(local.local_vars.project_name, "")
-    region                      = try(local.local_vars.region, "")
     users                       = try(local.local_vars.users, {})
     hoop                        = try(local.local_vars.hoop, {})
     password_rotation_period    = try(local.local_vars.password_rotation_period, 90)
@@ -170,7 +167,6 @@ usage: |-
   name_prefix: "atlas" # (Required) Prefix used to compose usernames when users[<key>].username is not provided. Allowed: lowercase letters, numbers, hyphens. No default.
   project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
   project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
-  region: "us-east-1" # (Optional) Cloud provider region identifier for username generation. Passed from cloud-specific wrapper modules. Default: "".
   users:
     <user_key>:
       username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
@@ -251,7 +247,6 @@ examples: |-
     }
     name_prefix  = "prod"
     project_name = "production-project"
-    region       = "us-east-1"
 
     users = {
       "app-reader" = {
