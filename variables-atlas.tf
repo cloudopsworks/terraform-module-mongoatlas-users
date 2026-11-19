@@ -32,7 +32,7 @@ variable "project_name" {
 
 variable "region" {
   description = <<-EOD
-  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined; a single-part region is truncated to its first char (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "e"). Ignored when users[<key>].username is set. Default: "" (no suffix).
   EOD
   type        = string
   default     = ""

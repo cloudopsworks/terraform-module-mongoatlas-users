@@ -74,7 +74,7 @@ usage: |-
   #project_id: ""
   # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
   #project_name: ""
-  # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+  # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined; a single-part region is truncated to its first char (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "e"). Ignored when users[<key>].username is set. Default: "" (no suffix).
   #region: ""
   # (Optional) MongoDB Atlas users configuration. See variable reference below for full structure. Default: {}.
   #users: {}
@@ -170,7 +170,7 @@ usage: |-
   name_prefix: "atlas" # (Required) Prefix used to compose usernames when users[<key>].username is not provided. Allowed: lowercase letters, numbers, hyphens. No default.
   project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
   project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
-  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined; a single-part region is truncated to its first char (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "e"). Ignored when users[<key>].username is set. Default: "" (no suffix).
   users:
     <user_key>:
       username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>[-<region_suffix>]-<user_key>`. Default: generated.
