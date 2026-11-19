@@ -7,31 +7,31 @@
 #     Distributed Under Apache v2.0 License
 #
 
-# Establish this is a HUB or spoke configuration
+# is_hub: false # (Optional) Is this a hub or spoke configuration? Default: false
 variable "is_hub" {
-  description = <<-EOD
-  is_hub: false # (Optional) Whether this is a hub or spoke configuration. Default: false.
-  EOD
+  description = "Is this a hub or spoke configuration?"
   type        = bool
   default     = false
 }
 
+# spoke_def: "001" # (Optional) Spoke ID Number, must be a 3 digit number. Default: "001"
 variable "spoke_def" {
-  description = <<-EOD
-  spoke_def: "001" # (Optional) Spoke definition. Default: "001".
-  EOD
+  description = "Spoke ID Number, must be a 3 digit number"
   type        = string
   default     = "001"
+  validation {
+    condition     = (length(var.spoke_def) == 3) && tonumber(var.spoke_def) != null
+    error_message = "The spoke_def must be a 3 digit number as string."
+  }
 }
 
+# org: # (Required) Organization details
+#   organization_name: "example" # (Required) The name of the organization
+#   organization_unit: "devops"  # (Required) The unit within the organization
+#   environment_type: "production" # (Required) The type of environment (e.g. production, staging)
+#   environment_name: "prod"      # (Required) The name of the environment
 variable "org" {
-  description = <<-EOD
-  org:
-    organization_name: "my-org" # (Required) Organization name.
-    organization_unit: "my-unit" # (Required) Organization unit.
-    environment_type: "prod" # (Required) Environment type.
-    environment_name: "production" # (Required) Environment name.
-  EOD
+  description = "Organization details"
   type = object({
     organization_name = string
     organization_unit = string
@@ -40,10 +40,10 @@ variable "org" {
   })
 }
 
+# extra_tags: # (Optional) Extra tags to add to the resources. Default: {}
+#   Tag1: "Value1"
 variable "extra_tags" {
-  description = <<-EOD
-  extra_tags: {} # (Optional) Extra tags to apply to all resources. Default: {}.
-  EOD
+  description = "Extra tags to add to the resources"
   type        = map(string)
   default     = {}
 }
