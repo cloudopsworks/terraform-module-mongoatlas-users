@@ -8,6 +8,8 @@ name_prefix: "atlas"
 #project_id: ""
 # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
 #project_name: ""
+# (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+#region: ""
 # (Optional) MongoDB Atlas users configuration. See README.yaml for full structure. Default: {}.
 #users: {}
 # (Optional) Hoop.dev connection metadata configuration. See README.yaml for full structure. Default: {}.

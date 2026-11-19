@@ -30,11 +30,20 @@ variable "project_name" {
   default     = ""
 }
 
+variable "region" {
+  description = <<-EOD
+  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+  EOD
+  type        = string
+  default     = ""
+  nullable    = false
+}
+
 variable "users" {
   description = <<-EOD
   users:
     <user_key>:
-      username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
+      username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>[-<region_suffix>]-<user_key>`. Default: generated.
       name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
       auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
       password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.

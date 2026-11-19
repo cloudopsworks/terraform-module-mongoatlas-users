@@ -8,8 +8,13 @@
 #
 
 locals {
+  # Cloud-agnostic region suffix: truncate each hyphen-separated part to 2 chars and rejoin
+  region_arr = var.region != "" ? split("-", var.region) : [""]
+  region_suffix = var.region != "" ? format("-%s", join("", [
+    for part in local.region_arr : lower(substr(part, 0, 2))
+  ])) : ""
   user_names_list = {
-    for k, v in var.users : k => try(v.username, format("%s-%s-%s", try(v.name_prefix, var.name_prefix), local.system_name_short, k))
+    for k, v in var.users : k => try(v.username, format("%s-%s%s-%s", try(v.name_prefix, var.name_prefix), local.system_name_short, local.region_suffix, k))
   }
   connection_names = {
     for key, user in var.users : key => format("mongo-db-%s-%s-%s",

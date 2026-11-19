@@ -74,6 +74,8 @@ usage: |-
   #project_id: ""
   # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
   #project_name: ""
+  # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
+  #region: ""
   # (Optional) MongoDB Atlas users configuration. See variable reference below for full structure. Default: {}.
   #users: {}
   # (Optional) Hoop.dev connection metadata configuration. See variable reference below for full structure. Default: {}.
@@ -152,6 +154,7 @@ usage: |-
     name_prefix = local.local_vars.name_prefix
     project_id  = dependency.project.outputs.project_id
     project_name                = try(local.local_vars.project_name, "")
+    region                      = try(local.local_vars.region, "")
     users                       = try(local.local_vars.users, {})
     hoop                        = try(local.local_vars.hoop, {})
     password_rotation_period    = try(local.local_vars.password_rotation_period, 90)
@@ -167,9 +170,10 @@ usage: |-
   name_prefix: "atlas" # (Required) Prefix used to compose usernames when users[<key>].username is not provided. Allowed: lowercase letters, numbers, hyphens. No default.
   project_id: "60f0f0f0f0f0f0f0f0f0f0f0" # (Optional) Atlas Project ID. One of `project_id` or `project_name` must be provided. Default: "".
   project_name: "my-project" # (Optional) Atlas Project Name. One of `project_id` or `project_name` must be provided. Default: "".
+  region: "us-east-1" # (Optional) Cloud provider region identifier appended to generated usernames as a short suffix: each hyphen-separated part is truncated to 2 lowercase chars and joined (e.g. "us-east-1" -> "usea1", "us-central1" -> "usce", "eastus" -> "ea"). Ignored when users[<key>].username is set. Default: "" (no suffix).
   users:
     <user_key>:
-      username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>-<user_key>`. Default: generated.
+      username: "user1" # (Optional) Explicit username. If omitted, composed as `<name_prefix|user.name_prefix>-<system_name_short>[-<region_suffix>]-<user_key>`. Default: generated.
       name_prefix: "prefix1" # (Optional) Per-user prefix to build the username. If omitted, uses var.name_prefix. Default: null.
       auth_database: "admin" # (Optional) Authentication database. Common: "admin". Default: "admin".
       password_rotation_period: 90 # (Optional) Rotation period in days for this user. Overrides var.password_rotation_period. Default: var.password_rotation_period.
@@ -247,6 +251,7 @@ examples: |-
     }
     name_prefix  = "prod"
     project_name = "production-project"
+    region       = "us-east-1"
 
     users = {
       "app-reader" = {
